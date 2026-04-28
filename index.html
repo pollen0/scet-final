@@ -963,7 +963,10 @@ const cw={
     if(ug[r][c]){ug[r][c]='';delete ck[r+','+c];this.upd();this.save()}
     else{this.ret();const{sr:nr,sc:nc}=this.st;if(nr!==null){ug[nr][nc]='';delete ck[nr+','+nc];this.upd();this.save()}}
   },
-  adv(){const{sr:r,sc:c,dir,g}=this.st;const dr=dir==='d'?1:0,dc=dir==='a'?1:0;const nr=r+dr,nc=c+dc;if(nr<g.rows&&nc<g.cols&&g.grid[nr]?.[nc]!=null){this.st.sr=nr;this.st.sc=nc}},
+  adv(){const{sr:r,sc:c,dir,g,ug}=this.st;const dr=dir==='d'?1:0,dc=dir==='a'?1:0;let nr=r+dr,nc=c+dc;
+    while(nr<g.rows&&nc<g.cols&&g.grid[nr]?.[nc]!=null){if(!ug[nr][nc]||ug[nr][nc]!==g.grid[nr][nc]){this.st.sr=nr;this.st.sc=nc;return}nr+=dr;nc+=dc}
+    // If all remaining are filled, just move one step
+    const nr2=r+dr,nc2=c+dc;if(nr2<g.rows&&nc2<g.cols&&g.grid[nr2]?.[nc2]!=null){this.st.sr=nr2;this.st.sc=nc2}},
   ret(){const{sr:r,sc:c,dir,g}=this.st;const dr=dir==='d'?1:0,dc=dir==='a'?1:0;const nr=r-dr,nc=c-dc;if(nr>=0&&nc>=0&&g.grid[nr]?.[nc]!=null){this.st.sr=nr;this.st.sc=nc}},
   arrow(k){
     const{sr:r,sc:c,g}=this.st;const dm={ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1]};
@@ -1564,8 +1567,9 @@ const mini={
     if(e.key==='Backspace'||e.key==='Delete'){e.preventDefault();const{ug}=this.st;if(ug[sr][scc]){ug[sr][scc]='';this.upd();this.save()}else{const dr2=this.st.dir==='d'?1:0,dc2=this.st.dir==='a'?1:0;const nr=sr-dr2,nc=scc-dc2;if(nr>=0&&nc>=0&&this.st.g.grid[nr]?.[nc]!=null){this.st.sr=nr;this.st.sc=nc;this.st.ug[nr][nc]='';this.upd();this.save()}}return}
     if(e.key===' '){e.preventDefault();const m=this.st.g.cm[sr][scc];const nd=this.st.dir==='a'?'d':'a';if(m[nd])this.st.dir=nd;this.upd();return}
     if(/^[a-zA-Z]$/.test(e.key)){e.preventDefault();const{ug,g}=this.st;ug[sr][scc]=e.key.toUpperCase();
-      const dr2=this.st.dir==='d'?1:0,dc2=this.st.dir==='a'?1:0;const nr=sr+dr2,nc=scc+dc2;
-      if(nr<g.rows&&nc<g.cols&&g.grid[nr]?.[nc]!=null){this.st.sr=nr;this.st.sc=nc}
+      const dr2=this.st.dir==='d'?1:0,dc2=this.st.dir==='a'?1:0;let nr=sr+dr2,nc=scc+dc2;
+      let moved=false;while(nr<g.rows&&nc<g.cols&&g.grid[nr]?.[nc]!=null){if(!ug[nr][nc]||ug[nr][nc]!==g.grid[nr][nc]){this.st.sr=nr;this.st.sc=nc;moved=true;break}nr+=dr2;nc+=dc2}
+      if(!moved){const nr2=sr+dr2,nc2=scc+dc2;if(nr2<g.rows&&nc2<g.cols&&g.grid[nr2]?.[nc2]!=null){this.st.sr=nr2;this.st.sc=nc2}}
       this.upd();this.save();this.chkDone()}
   },
   chkDone(){
