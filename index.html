@@ -708,35 +708,163 @@ const cw={
     i=back?i-1:i+1;if(i<0)i=all.length-1;if(i>=all.length)i=0;
     this.sel(all[i].row,all[i].col,all[i].dir);
   },
-  // HINT SYSTEM — infinite, cycles through creative hints then keeps revealing letters
+  // HINT SYSTEM — infinite, escalating, interactive classroom hints
   hint(){
     const w=this.curWord();if(!w)return;
     const key=w.num+'_'+w.dir;
     const level=(this.st.hints[key]||0);
     const{ug,g}=this.st;
     const dr=w.dir==='d'?1:0,dc=w.dir==='a'?1:0;
+    const answer=w.a;
 
     const revealOne=()=>{
       const empty=[];
-      for(let i=0;i<w.a.length;i++){const r=w.row+dr*i,c=w.col+dc*i;if(ug[r][c]!==g.grid[r][c])empty.push(i)}
+      for(let i=0;i<answer.length;i++){const r=w.row+dr*i,c=w.col+dc*i;if(ug[r][c]!==g.grid[r][c])empty.push(i)}
       if(empty.length){const pick=empty[Math.floor(Math.random()*empty.length)];
         const r=w.row+dr*pick,c=w.col+dc*pick;ug[r][c]=g.grid[r][c];this.st.rg[r][c]=true}
       this.st.hints[key]=level+1;this.upd();this.save();this.chkDone();
     };
 
+    const blanks=()=>{
+      let b='';for(let i=0;i<answer.length;i++){
+        const r=w.row+dr*i,c=w.col+dc*i;
+        b+=ug[r][c]===g.grid[r][c]?answer[i]:'_';
+        if(i<answer.length-1)b+=' ';
+      }return b;
+    };
+
+    const popup=(icon,title,body)=>{
+      showModal(`<div style="font-size:48px;margin-bottom:8px">${icon}</div><h3>${title}</h3><div style="margin:14px 0">${body}</div><button onclick="closeModal()">Got it</button>`);
+      this.st.hints[key]=level+1;this.save();
+    };
+
     if(level===0){
+      // 1. Reveal a letter
       revealOne();
     }else if(level===1){
-      showModal(`<h3>Source Hint</h3><p>This word comes from:</p><p style="font-size:20px;font-weight:700;margin:16px 0">${w.src}</p><button onclick="closeModal()">Got it</button>`);
-      this.st.hints[key]=2;this.save();
+      // 2. Source: which lecture
+      popup('📖','Source Hint',`<p>This word comes from:</p><p style="font-size:22px;font-weight:700;margin:8px 0">${w.src}</p>`);
     }else if(level===2){
-      const letters=w.a.split('');
+      // 3. Charades: act it out
+      popup('🎭','Act It Out!',`<p style="font-size:16px;line-height:1.6">Stand up and <strong>act out this word</strong> to your partner — no talking allowed!<br><br>You have <strong>30 seconds.</strong> If they guess it, you both get bragging rights.</p><p style="margin-top:12px;color:var(--muted);font-size:13px">Hint: it's ${answer.length} letters, starts with <strong>${answer[0]}</strong></p>`);
+    }else if(level===3){
+      // 4. Scrambled letters
+      const letters=answer.split('');
       for(let i=letters.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[letters[i],letters[j]]=[letters[j],letters[i]]}
-      showModal(`<h3>Unscramble</h3><p>The answer's letters, scrambled:</p><div class="scramble">${letters.join(' ')}</div><button onclick="closeModal()">Got it</button>`);
-      this.st.hints[key]=3;this.save();
+      popup('🔀','Unscramble',`<p>The answer's letters, scrambled:</p><div class="scramble">${letters.join(' ')}</div>`);
+    }else if(level===4){
+      // 5. Taboo: describe without key words
+      const taboo=this.getTabooWords(w);
+      popup('🚫','Taboo Challenge',`<p style="font-size:16px;line-height:1.6">Describe this word to your partner, but you <strong>CANNOT say</strong>:</p><div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:12px 0">${taboo.map(t=>`<span style="background:#fee;border:1px solid #fcc;border-radius:16px;padding:4px 14px;font-weight:600;color:#c33">${t}</span>`).join('')}</div><p style="color:var(--muted);font-size:13px">${answer.length} letters</p>`);
+    }else if(level===5){
+      // 6. Pictionary: draw it
+      popup('🎨','Draw It!',`<p style="font-size:16px;line-height:1.6">Grab a piece of paper (or use the whiteboard) and <strong>draw this concept</strong> for your partner.<br><br>No letters, numbers, or symbols — only pictures!</p><p style="margin-top:12px;color:var(--muted);font-size:13px">Pattern: <span style="font-weight:700;letter-spacing:3px">${blanks()}</span></p>`);
+    }else if(level===6){
+      // 7. Rhyme time
+      const rhymes=this.getRhymeHints(answer);
+      popup('🎵','Rhyme Time',`<p style="font-size:16px;line-height:1.6">It rhymes with (or sounds like):</p><p style="font-size:22px;font-weight:700;margin:10px 0">${rhymes}</p><p style="color:var(--muted);font-size:13px">Pattern: <span style="font-weight:700;letter-spacing:3px">${blanks()}</span></p>`);
+    }else if(level===7){
+      // 8. Hot seat: one person faces away, class gives one-word clues
+      popup('🪑','Hot Seat',`<p style="font-size:16px;line-height:1.6">One person sits facing <strong>away</strong> from the screen. Everyone else gives <strong>one-word clues</strong> — take turns around the table.<br><br>The hot-seat player guesses after each clue.</p><p style="margin-top:12px;color:var(--muted);font-size:13px">The answer is ${answer.length} letters. First letter: <strong>${answer[0]}</strong>, last letter: <strong>${answer[answer.length-1]}</strong></p>`);
+    }else if(level===8){
+      // 9. Emoji translation
+      const emojis=this.getEmojiHint(answer);
+      popup('💬','Emoji Translate',`<p style="font-size:16px">The answer in emoji form:</p><p style="font-size:36px;margin:14px 0">${emojis}</p><p style="color:var(--muted);font-size:13px">Pattern: <span style="font-weight:700;letter-spacing:3px">${blanks()}</span></p>`);
+    }else if(level===9){
+      // 10. Fill in the blank + reveal letter
+      popup('✏️','Almost There',`<p>The answer with blanks:</p><div class="scramble">${blanks()}</div><p style="margin-top:8px;color:var(--muted);font-size:13px">One more hint click will reveal a letter</p>`);
     }else{
+      // 11+: keep revealing letters forever
       revealOne();
     }
+  },
+  getTabooWords(w){
+    const tabooMap={
+      'RESILIENCE':['bounce','back','tough','recover','strength'],
+      'GROWTH':['mindset','grow','fixed','Dweck','develop'],
+      'MINDSET':['growth','fixed','think','brain','belief'],
+      'PRACTICE':['do','repeat','exercise','train','learn'],
+      'INTENTION':['goal','plan','purpose','aim','mean'],
+      'REJECTION':['no','refuse','deny','turn down','therapy'],
+      'AWARENESS':['self','know','conscious','notice','mindful'],
+      'CARNIVAL':['final','fair','festival','fun','project'],
+      'TEAMWORK':['group','together','collaborate','team','partner'],
+      'BOUNCE':['Tigger','spring','ball','jump','resilience'],
+      'PERCEPTION':['see','view','mind','reality','believe'],
+      'CURIOSITY':['wonder','walk','explore','ask','question'],
+      'BURNOUT':['tired','exhaust','stress','overwhelm','drain'],
+      'ANXIETY':['worry','stress','nervous','fear','panic'],
+      'COMFORT':['zone','easy','safe','cozy','relax'],
+      'GRATITUDE':['thankful','grateful','appreciate','thanks','blessing'],
+      'PERSPECTIVE':['view','angle','IQ','see','standpoint'],
+      'SCIENTIST':['Grant','test','hypothesis','experiment','research'],
+      'PREACHER':['Grant','mode','right','preach','believe'],
+      'PROSECUTOR':['Grant','wrong','argue','attack','debate'],
+      'PIVOT':['change','turn','shift','switch','direction'],
+      'EVEREST':['mountain','climb','1996','summit','Himalaya'],
+      'SUMMIT':['top','peak','Everest','highest','climb'],
+      'BASECAMP':['camp','start','5300','expedition','ground'],
+      'SHERPA':['guide','Nepal','climb','mountain','carry'],
+      'SILENCE':['quiet','speak','Hering','unlearn','voice'],
+      'FORGIVENESS':['forgive','pardon','let go','grudge','mercy'],
+      'COMPASSION':['care','kind','empathy','feel','heart'],
+      'BELONGING':['community','fit in','part of','group','include'],
+    };
+    const key=w.a.toUpperCase();
+    if(tabooMap[key])return tabooMap[key];
+    const clueWords=w.c.split(/\s+/).filter(x=>x.length>3).slice(0,5);
+    return clueWords.length?clueWords:['course','class','lecture','word','answer'];
+  },
+  getRhymeHints(answer){
+    const rhymeMap={
+      'RESILIENCE':'brilliance','GROWTH':'both','MINDSET':'mindget? (rhymes with "sunset")','PRACTICE':'cactus (sort of!)','INTENTION':'attention',
+      'REJECTION':'direction','AWARENESS':'preparedness','BOUNCE':'ounce','AGILE':'fragile','FIXED':'mixed',
+      'SHARE':'care','TIGER':'cider (close!)','GRIT':'fit','LEGO':'ego','PERCEPTION':'perfection',
+      'CURIOSITY':'generosity','BURNOUT':'turnout','ANXIETY':'variety','COMFORT':'effort (close!)','NOVELTY':'loyalty',
+      'SPIRALS':'virals','TETRIS':'Tetris (it\'s unique!)','SENSES':'fences','GOLDEN':'olden','PROUST':'oust',
+      'DONUT':'go nut','SMART':'heart','EARTH':'mirth','FIRE':'higher','PERSPECTIVE':'detective',
+      'RETHINKING':'drinking (without the D!)','PROSECUTOR':'executor','GRATITUDE':'attitude','VISUALIZE':'realize',
+      'SCIENTIST':'hygienist (sort of!)','DOPAMINE':'trampoline (close!)','PREACHER':'teacher','CRUCIBLE':'producible',
+      'HUMILITY':'ability','REFRAME':'rename','PIVOT':'rivet','GRANT':'can\'t','SWOT':'what',
+      'WOOP':'hoop','EVEREST':'interest','SUMMIT':'plummet','BASECAMP':'damp','SHERPA':'per-pa (sounds like a name!)',
+      'HALL':'tall','BECK':'deck','BIAS':'flyers (stretch!)','MAPPING':'capping','SILENCE':'violence',
+      'FORGIVENESS':'forgiveness (it\'s its own rhyme!)','COMPASSION':'fashion','BELONGING':'longing',
+      'RECOGNIZE':'mesmerize','NORTHSTAR':'guitar','FAIRNESS':'awareness','BECOMING':'coming',
+      'JOHARI':'safari','HERING':'hearing','REBOOT':'pursuit','YUAN':'wan','WEST':'best',
+      'SUNK':'chunk','SPRINGBOARD':'skateboard','SUPERPOWERS':'showers','KILLSWITCH':'glitch',
+      'BLACKBERRY':'scary (the -erry!)','CONNECTION':'direction','SEROTONIN':'melatonin',
+      'SUFFERING':'buffering','IMPOSTER':'roster','KINDNESS':'blindness','KAHNEMAN':'ottoman (kind of!)',
+      'PRONOIA':'paranoia','RECENCY':'decency','AGILITY':'ability','WINDOW':'pillow (close!)',
+      'BUNCH':'lunch','RUM':'gum',
+    };
+    return rhymeMap[answer]||'sounds like... "'+answer.slice(0,2)+'..."';
+  },
+  getEmojiHint(answer){
+    const emojiMap={
+      'RESILIENCE':'💪🔄⬆️','GROWTH':'🌱📈🧠','MINDSET':'🧠⚙️💭','PRACTICE':'🔄✍️💪',
+      'INTENTION':'🎯🧭💡','REJECTION':'🚫😤→😊','AWARENESS':'👁️🧠💡','CARNIVAL':'🎪🎉🎮',
+      'TEAMWORK':'👥🤝💪','BOUNCE':'🏀⬆️🐯','AGILE':'🏃‍♂️💨🔄','FIXED':'🔒🧱😰',
+      'SHARE':'🤲📤👥','TIGER':'🐯💪🔥','GRIT':'😤💪🏋️','LEGO':'🧱🔲🎨',
+      'PERCEPTION':'👁️🧠🔮','CURIOSITY':'🤔🔍🚶','BURNOUT':'🔥😵🪫','ANXIETY':'😰💭⚡',
+      'COMFORT':'🛋️😌☁️','NOVELTY':'✨🆕👀','SPIRALS':'🌀🐚🌊','TETRIS':'🎮🟦🟥',
+      'SENSES':'👁️👂👃','GOLDEN':'✨1️⃣.6️⃣🌻','PROUST':'🍪👃💭','DONUT':'🍩😋🔑',
+      'SMART':'🧠💪📋','EARTH':'🌍🪨💚','FIRE':'🔥💪✨','MORNING':'🌅🙏😊',
+      'PERSPECTIVE':'👁️🔭💡','RETHINKING':'🔄🤔📖','PROSECUTOR':'⚖️👈❌','GRATITUDE':'🙏😊💛',
+      'VISUALIZE':'👁️💭✨','SCIENTIST':'🔬🧪📊','DOPAMINE':'💊😊⚡','PREACHER':'📢✅🙌',
+      'CRUCIBLE':'⚔️🤔🗺️','HUMILITY':'😌📉💪','REFRAME':'🖼️🔄💡','PIVOT':'🔄↪️🚀',
+      'GRANT':'📚🤔🔁','SWOT':'💪😰🎯😱','WOOP':'🌟🎯🧱📋','EVEREST':'🏔️❄️⛰️',
+      'SUMMIT':'🏔️⬆️🏁','BASECAMP':'⛺🏔️5️⃣','SHERPA':'🧗‍♂️🏔️💪','HALL':'🧑‍✈️📻😢',
+      'BECK':'🧗‍♂️💀→💪','BIAS':'🧠🫣❌','MAPPING':'🗺️🔮🛤️','SILENCE':'🤫📖🗣️',
+      'FORGIVENESS':'💔→❤️‍🩹🕊️','COMPASSION':'❤️🤗😊','BELONGING':'👥🏠❤️',
+      'RECOGNIZE':'👁️💡1️⃣','NORTHSTAR':'⭐🧭💡','FAIRNESS':'⚖️➕✊','BECOMING':'🐛→🦋📈',
+      'JOHARI':'🪟👁️❓','HERING':'📚🤫🗣️','REBOOT':'🔄💻💡','YUAN':'👨‍💻🎬🤔',
+      'WEST':'👩‍🏫🧠💬','SUNK':'💸⬇️🤦','SPRINGBOARD':'🤸🚀💡','SUPERPOWERS':'🦸‍♂️💥✨',
+      'KILLSWITCH':'🔴⏹️↩️','BLACKBERRY':'📱❌🔁','CONNECTION':'🤝🗣️😊','SEROTONIN':'🧠😊💊',
+      'SUFFERING':'😣💪📈','IMPOSTER':'🎭😰💼','KINDNESS':'❤️🤗💯','KAHNEMAN':'🧠⚡📖',
+      'PRONOIA':'😊🌍💫','RECENCY':'🕐⚖️🧠','AGILITY':'🏃💨🔄','WINDOW':'🪟👁️💡',
+      'BUNCH':'🧑‍💼🔄🚀','RUM':'🧠😵🔄',
+    };
+    return emojiMap[answer]||'🤔❓💭';
   },
   // CHECK / REVEAL
   checkWord(){
