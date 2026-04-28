@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Applied Resilience — Games</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#fff;--bg-alt:#f5f5f0;--text:#121212;--muted:#5a5a5a;--light:#999;
+  --border:#e0e0e0;--radius:6px;
+  --green:#6aaa64;--green-dark:#538d4e;--yellow:#c9b458;--gray:#787c7e;--gray-light:#d3d6da;--gray-dark:#3a3a3c;
+  --cw-highlight:#a7d8ff;--cw-word:#dbe9f8;--cw-black:#121212;
+  --conn-yellow:#f9df6d;--conn-green:#a0c35a;--conn-blue:#b0c4ef;--conn-purple:#ba81c5;
+  --cell:38px;
+}
+body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+a{color:inherit;text-decoration:none}
+
+/* ===== NAV ===== */
+.nav{border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;background:var(--bg);z-index:100}
+.nav-back{font-size:20px;padding:4px 8px;border-radius:4px;color:var(--text);display:none}
+.nav-back:hover{background:var(--bg-alt)}
+.nav-back.show{display:block}
+.nav-brand{font-family:Georgia,'Times New Roman',serif;font-size:18px;font-weight:700;flex:1}
+.nav-brand small{font-weight:400;color:var(--muted);margin-left:6px;font-size:14px}
+.nav-timer{font-variant-numeric:tabular-nums;font-size:15px;color:var(--muted);display:none}
+.nav-actions{display:flex;gap:6px}
+.nav-actions button{padding:6px 14px;border:1px solid var(--border);border-radius:20px;font-size:13px;font-weight:500;color:var(--text);background:var(--bg)}
+.nav-actions button:hover{background:var(--bg-alt)}
+
+/* ===== HUB ===== */
+.hub{max-width:600px;margin:0 auto;padding:40px 20px 80px}
+.hub-title{font-family:Georgia,serif;font-size:40px;font-weight:700;text-align:center;margin-bottom:4px}
+.hub-sub{text-align:center;color:var(--muted);font-size:15px;margin-bottom:40px}
+.game-list{display:flex;flex-direction:column;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.game-tile{display:flex;align-items:center;gap:18px;padding:20px 24px;background:var(--bg);cursor:pointer;transition:background .15s}
+.game-tile:hover{background:var(--bg-alt)}
+.game-icon{width:56px;height:56px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0}
+.game-icon.cw{background:#c4e4c0;color:#2d5a27}
+.game-icon.cn{background:#e8d5f5;color:#6b3d8a}
+.game-icon.wg{background:#d4e4b0;color:#4a6a2a}
+.game-info{flex:1}
+.game-name{font-family:Georgia,serif;font-size:20px;font-weight:700;margin-bottom:2px}
+.game-desc{font-size:14px;color:var(--muted);line-height:1.4}
+.game-arrow{font-size:20px;color:var(--light)}
+
+/* ===== SHARED VIEW ===== */
+.view{display:none;max-width:1100px;margin:0 auto;padding:0 20px 40px}
+.view.active{display:block}
+.view-title{font-family:Georgia,serif;font-size:28px;font-weight:700;text-align:center;padding:20px 0 4px}
+.view-sub{text-align:center;color:var(--muted);font-size:14px;margin-bottom:20px}
+
+/* ===== PUZZLE PICKER ===== */
+.picker{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:24px}
+.picker button{padding:8px 18px;border:1px solid var(--border);border-radius:20px;font-size:13px;font-weight:500;color:var(--text);background:var(--bg)}
+.picker button:hover{background:var(--bg-alt)}
+.picker button.active{background:var(--text);color:var(--bg);border-color:var(--text)}
+.picker button.done{border-color:var(--green);color:var(--green)}
+.picker button.done.active{background:var(--green);color:#fff;border-color:var(--green)}
+
+/* ===== CROSSWORD ===== */
+.cw-clue-bar{background:var(--bg-alt);border-radius:var(--radius);padding:10px 16px;margin-bottom:16px;font-size:15px;min-height:42px;display:flex;align-items:center;gap:8px}
+.cw-clue-num{font-weight:700;white-space:nowrap}
+.cw-body{display:flex;gap:24px;align-items:flex-start}
+.cw-grid-wrap{flex-shrink:0}
+.cw-grid{display:inline-grid;border:2px solid var(--cw-black);user-select:none}
+.cw-cell{width:var(--cell);height:var(--cell);border:.5px solid var(--border);position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer;background:#fff;transition:background .08s}
+.cw-cell.black{background:var(--cw-black);cursor:default;border-color:var(--cw-black)}
+.cw-cell.hl-word{background:var(--cw-word)}
+.cw-cell.hl-cell{background:var(--cw-highlight)}
+.cw-cell .n{position:absolute;top:1px;left:3px;font-size:10px;font-weight:600;line-height:1;color:#333;pointer-events:none}
+.cw-cell .l{font-size:16px;font-weight:600;pointer-events:none;text-transform:uppercase}
+.cw-cell .l.pencil{color:#aaa;font-weight:400}
+.cw-cell .l.revealed{color:var(--green-dark)}
+.cw-cell .l.wrong{color:#c9372c}
+.cw-cell .err{position:absolute;top:0;right:0;width:0;height:0;border-top:7px solid #c9372c;border-left:7px solid transparent}
+.cw-clues{flex:1;min-width:240px;max-height:calc(100vh - 200px);overflow-y:auto}
+.cw-clues-hd{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid var(--border)}
+.cw-clues-sec{margin-bottom:20px}
+.cw-clue{padding:5px 8px;border-radius:4px;cursor:pointer;font-size:14px;line-height:1.4;display:flex;gap:8px}
+.cw-clue:hover{background:var(--bg-alt)}
+.cw-clue.active{background:var(--cw-word);font-weight:500}
+.cw-clue-n{font-weight:700;min-width:20px;color:var(--muted)}
+
+.cw-toolbar{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;align-items:center}
+.cw-toolbar button{padding:7px 16px;border:1px solid var(--border);border-radius:20px;font-size:13px;font-weight:500;background:var(--bg)}
+.cw-toolbar button:hover{background:var(--bg-alt)}
+.cw-toolbar button.on{background:var(--text);color:#fff;border-color:var(--text)}
+.cw-toolbar .sep{flex:1}
+
+/* ===== HINT POPUP ===== */
+.hint-popup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:24px 32px;box-shadow:0 12px 40px rgba(0,0,0,.15);z-index:200;text-align:center;max-width:360px;width:90%;animation:popIn .25s ease}
+.hint-popup h3{font-family:Georgia,serif;font-size:20px;margin-bottom:8px}
+.hint-popup p{font-size:15px;color:var(--muted);line-height:1.5;margin-bottom:16px}
+.hint-popup .scramble{font-size:22px;font-weight:700;letter-spacing:4px;color:var(--text);margin:12px 0}
+.hint-popup button{padding:8px 24px;border:1px solid var(--border);border-radius:20px;font-size:14px;font-weight:500;background:var(--bg)}
+.hint-popup button:hover{background:var(--bg-alt)}
+.hint-overlay{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:199;animation:fadeIn .2s}
+@keyframes popIn{from{transform:translate(-50%,-50%) scale(.9);opacity:0}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+
+/* ===== CONNECTIONS ===== */
+.cn-board{max-width:500px;margin:0 auto}
+.cn-found{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.cn-found-row{border-radius:8px;padding:14px;text-align:center;animation:popIn .35s ease}
+.cn-found-row .cat{font-weight:700;font-size:15px;text-transform:uppercase}
+.cn-found-row .words{font-size:14px;margin-top:3px}
+.cn-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.cn-tile{aspect-ratio:1.6;border-radius:8px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:14px;font-weight:700;text-transform:uppercase;background:var(--bg-alt);cursor:pointer;transition:transform .1s,background .15s;padding:4px;line-height:1.2;border:2px solid transparent;user-select:none}
+.cn-tile:hover{transform:scale(1.03)}
+.cn-tile.selected{background:var(--text);color:#fff;transform:scale(1.03)}
+.cn-tile.shake{animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.cn-controls{display:flex;gap:10px;justify-content:center;align-items:center;margin-bottom:16px}
+.cn-controls button{padding:10px 24px;border:1px solid var(--border);border-radius:24px;font-size:14px;font-weight:600;background:var(--bg)}
+.cn-controls button:hover{background:var(--bg-alt)}
+.cn-controls button.primary{background:var(--text);color:#fff;border-color:var(--text)}
+.cn-controls button.primary:hover{opacity:.9}
+.cn-controls button:disabled{opacity:.35;cursor:default}
+.cn-lives{display:flex;gap:6px;justify-content:center;margin-bottom:16px}
+.cn-lives span{font-size:12px;color:var(--muted)}
+.cn-dot{width:14px;height:14px;border-radius:50%;background:var(--text)}
+.cn-dot.lost{background:var(--gray-light)}
+.cn-msg{text-align:center;font-size:14px;color:var(--muted);margin-bottom:12px;min-height:20px}
+
+/* ===== WORDLE ===== */
+.wl-board{max-width:360px;margin:0 auto}
+.wl-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:20px;max-width:330px;margin-left:auto;margin-right:auto}
+.wl-tile{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;text-transform:uppercase;border:2px solid var(--gray-light);border-radius:2px;transition:transform .1s}
+.wl-tile.filled{border-color:var(--gray);animation:pop .1s}
+.wl-tile.correct{background:var(--green);color:#fff;border-color:var(--green)}
+.wl-tile.present{background:var(--yellow);color:#fff;border-color:var(--yellow)}
+.wl-tile.absent{background:var(--gray);color:#fff;border-color:var(--gray)}
+.wl-tile.flip{animation:flip .5s}
+@keyframes pop{50%{transform:scale(1.08)}}
+@keyframes flip{0%{transform:rotateX(0)}50%{transform:rotateX(90deg)}100%{transform:rotateX(0)}}
+.wl-keyboard{display:flex;flex-direction:column;gap:6px;max-width:500px;margin:0 auto}
+.wl-kb-row{display:flex;gap:5px;justify-content:center}
+.wl-key{min-width:36px;height:52px;border-radius:4px;font-size:14px;font-weight:600;text-transform:uppercase;background:var(--gray-light);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background .1s;flex:1;max-width:44px}
+.wl-key.wide{min-width:56px;max-width:64px;font-size:12px}
+.wl-key:hover{opacity:.85}
+.wl-key.correct{background:var(--green);color:#fff}
+.wl-key.present{background:var(--yellow);color:#fff}
+.wl-key.absent{background:var(--gray-dark);color:#fff}
+.wl-msg{text-align:center;font-size:14px;font-weight:600;margin-bottom:12px;min-height:24px}
+
+/* ===== MODAL ===== */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center}
+.modal-bg.active{display:flex}
+.modal{background:var(--bg);border-radius:12px;padding:36px;max-width:400px;width:90%;text-align:center;animation:popIn .35s ease}
+.modal h2{font-family:Georgia,serif;font-size:26px;margin-bottom:4px}
+.modal p{color:var(--muted);font-size:14px;line-height:1.5;margin-bottom:8px}
+.modal .stats{display:flex;justify-content:center;gap:28px;margin:18px 0}
+.modal .stat-v{font-size:30px;font-weight:700}
+.modal .stat-l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.modal button{background:var(--green);color:#fff;border:none;padding:12px 36px;border-radius:24px;font-size:15px;font-weight:600;margin-top:8px}
+.modal button:hover{opacity:.9}
+.modal .clue-reveal{background:var(--bg-alt);border-radius:8px;padding:12px;margin:12px 0;font-size:14px;line-height:1.5;text-align:left}
+.modal .clue-reveal strong{color:var(--text)}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:768px){
+  .cw-body{flex-direction:column}
+  .cw-clues{max-height:none}
+  .hub-title{font-size:30px}
+  .game-tile{padding:16px 18px}
+  .cn-tile{font-size:12px}
+}
+@media(max-width:480px){
+  .cw-cell .n{font-size:8px}
+  .cw-cell .l{font-size:13px}
+  .wl-tile{font-size:22px}
+  .wl-key{height:46px;font-size:12px}
+}
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <button class="nav-back" id="navBack" onclick="hub()">&#8592;</button>
+  <div class="nav-brand" id="navBrand">Applied Resilience <small>Games</small></div>
+  <div class="nav-timer" id="navTimer">0:00</div>
+  <div class="nav-actions" id="navActions"></div>
+</div>
+
+<input id="hiddenInput" style="position:fixed;top:-100px;opacity:0;width:1px;height:1px" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+
+<!-- HUB -->
+<div id="hubView" class="hub">
+  <div class="hub-title">Games</div>
+  <div class="hub-sub">Applied Resilience — SCET, UC Berkeley</div>
+  <div class="game-list">
+    <div class="game-tile" onclick="showGame('crossword')">
+      <div class="game-icon cw">⊞</div>
+      <div class="game-info">
+        <div class="game-name">Crossword</div>
+        <div class="game-desc">6 themed puzzles from course lectures</div>
+      </div>
+      <div class="game-arrow">›</div>
+    </div>
+    <div class="game-tile" onclick="showGame('connections')">
+      <div class="game-icon cn">◧</div>
+      <div class="game-info">
+        <div class="game-name">Connections</div>
+        <div class="game-desc">Find groups of 4 related course terms</div>
+      </div>
+      <div class="game-arrow">›</div>
+    </div>
+    <div class="game-tile" onclick="showGame('wordle')">
+      <div class="game-icon wg">▦</div>
+      <div class="game-info">
+        <div class="game-name">Word Guess</div>
+        <div class="game-desc">Guess the 5-letter course term in 6 tries</div>
+      </div>
+      <div class="game-arrow">›</div>
+    </div>
+  </div>
+</div>
+
+<!-- CROSSWORD -->
+<div id="cwView" class="view">
+  <div class="view-title">Crossword</div>
+  <div class="view-sub" id="cwSub"></div>
+  <div class="picker" id="cwPicker"></div>
+  <div class="cw-clue-bar"><span class="cw-clue-num" id="cwClueNum"></span><span id="cwClueText">Select a cell to begin</span></div>
+  <div class="cw-body">
+    <div class="cw-grid-wrap">
+      <div class="cw-grid" id="cwGrid"></div>
+      <div class="cw-toolbar" id="cwToolbar"></div>
+    </div>
+    <div class="cw-clues" id="cwClues"></div>
+  </div>
+</div>
+
+<!-- CONNECTIONS -->
+<div id="cnView" class="view">
+  <div class="view-title">Connections</div>
+  <div class="view-sub">Group 4 course terms that share something in common</div>
+  <div class="picker" id="cnPicker"></div>
+  <div class="cn-board">
+    <div class="cn-found" id="cnFound"></div>
+    <div class="cn-grid" id="cnGrid"></div>
+    <div class="cn-msg" id="cnMsg"></div>
+    <div class="cn-controls" id="cnControls"></div>
+    <div class="cn-lives" id="cnLives"></div>
+  </div>
+</div>
+
+<!-- WORDLE -->
+<div id="wlView" class="view">
+  <div class="view-title">Word Guess</div>
+  <div class="view-sub">Guess the course term in 6 tries</div>
+  <div class="picker" id="wlPicker"></div>
+  <div class="wl-board">
+    <div class="wl-msg" id="wlMsg"></div>
+    <div class="wl-grid" id="wlGrid"></div>
+    <div class="wl-keyboard" id="wlKeyboard"></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalBg"><div class="modal" id="modalContent"></div></div>
+
+<script>
+// ============================
+// DATA
+// ============================
+const CW_PUZZLES = [
+  { id:1, title:"Foundations", sub:"Lecture 1 — Orientation", words:[
+    {a:"RESILIENCE",c:"The ability to bounce back from setbacks; the main subject of this course",src:"Lecture 1"},
+    {a:"INTENTION",c:"Step 1 of the class flow AND the name of the first course module",src:"Lecture 1"},
+    {a:"REJECTION",c:"___ Therapy: exercise where you deliberately try to get a \"No\"",src:"Lecture 1"},
+    {a:"AWARENESS",c:"Module 2: Self-___ (Classes 2–4)",src:"Lecture 1"},
+    {a:"CARNIVAL",c:"The unique format of the year-end final project",src:"Lecture 1"},
+    {a:"PRACTICE",c:"The GI Joe Fallacy proves knowing isn't enough — resilience requires this",src:"Lecture 1"},
+    {a:"TEAMWORK",c:"In the digital contract, the middle finger pledges this",src:"Lecture 1"},
+    {a:"MINDSET",c:"Carol Dweck's famous Stanford research concept",src:"Lecture 1"},
+    {a:"GROWTH",c:"___ mindset: \"I can try a different strategy\" (Carol Dweck)",src:"Lecture 1"},
+    {a:"BOUNCE",c:"Tigger's signature move — and the course's playful word for resilience",src:"Lecture 1"},
+    {a:"AGILE",c:"___ Thinking: Module 3 of the course (Classes 5–9)",src:"Lecture 1"},
+    {a:"SHARE",c:"The final step of the Proposed Resilience Tool",src:"Lecture 1"},
+    {a:"FIXED",c:"___ mindset: \"This is too hard. I can't do this.\"",src:"Lecture 1"},
+    {a:"TIGER",c:"Vicky's childhood spirit animal — grit, determination",src:"Lecture 1"},
+    {a:"GRIT",c:"Passion + perseverance through setbacks",src:"Lecture 1"},
+    {a:"LEGO",c:"Colorful building block used to assign group numbers on Day 1",src:"Lecture 1"},
+  ]},
+  { id:2, title:"Mind & Body", sub:"Lectures 2–3 — Senses & Neuroscience", words:[
+    {a:"PERCEPTION",c:"Alia Crum's key insight: a change in your ___ can change reality",src:"Lecture 2"},
+    {a:"CURIOSITY",c:"A \"___ Walk\" is one of the Self-Awareness exercises",src:"Lecture 3"},
+    {a:"OLFACTORY",c:"This brain cortex processes smell; COVID dialed down these receptors",src:"Lecture 2"},
+    {a:"FRACTALS",c:"Self-similar repeating natural patterns — one of 4 key visual patterns",src:"Lecture 2"},
+    {a:"BURNOUT",c:"34.4% of entrepreneurs experience this (2024 Founders Report)",src:"Lecture 2"},
+    {a:"ANXIETY",c:"50.2% of entrepreneurs struggle with this (2024 Founders Report)",src:"Lecture 2"},
+    {a:"NOVELTY",c:"\"Notice ___ within the ordinary\" — the Curiosity Walk prompt",src:"Lecture 3"},
+    {a:"SPIRALS",c:"Visual pattern in nature; found in shells and chameleon tails",src:"Lecture 2"},
+    {a:"COMFORT",c:"Growth mindset asks you to leave your ___ zone",src:"Lecture 2"},
+    {a:"MORNING",c:"\"___ Gratitude\": Dr. Sood's first core practice",src:"Lecture 3"},
+    {a:"TETRIS",c:"Playing this stimulates focus and may prevent PTSD flashbacks",src:"Lecture 2"},
+    {a:"SENSES",c:"The 5 inputs: sight, sound, smell, taste, touch",src:"Lecture 2"},
+    {a:"GOLDEN",c:"The ___ Ratio (1.618) appears in sunflowers and the Mona Lisa",src:"Lecture 2"},
+    {a:"PROUST",c:"The ___ Effect: emotional memory triggered by taste and smell",src:"Lecture 2"},
+    {a:"DONUT",c:"The sweetest magic word in the whole course — Class 3's code",src:"Lecture 3"},
+    {a:"SMART",c:"Dr. Sood's program: Stress Management And Resiliency Training",src:"Lecture 3"},
+    {a:"EARTH",c:"In the 4-elements pressure exercise: \"hold your ground\"",src:"Lecture 2"},
+    {a:"FIRE",c:"In the 4-elements pressure exercise: \"burn brighter\"",src:"Lecture 2"},
+    {a:"CRUM",c:"Dr. Alia ___, Stanford Mind and Body Lab director",src:"Lecture 2"},
+    {a:"NINETY",c:"The brain fatigues after ___ minutes — then needs uplifting emotions",src:"Lecture 3"},
+  ]},
+  { id:3, title:"Think Again", sub:"Lectures 4–5 — Tools & Decisions", words:[
+    {a:"PERSPECTIVE",c:"Class 4's bold claim: having this is \"worth 80 IQ points\"",src:"Lecture 4"},
+    {a:"RETHINKING",c:"Adam Grant's recommended cycle; also his book's core concept",src:"Lecture 5"},
+    {a:"PROSECUTOR",c:"Adam Grant danger mode #2: says \"You are wrong\"",src:"Lecture 5"},
+    {a:"HYPOTHESIS",c:"Vicky's teaching rationale, stated as a ___",src:"Lecture 4"},
+    {a:"GRATITUDE",c:"One of Dr. Sood's six neuroscience-based awareness tools",src:"Lecture 4"},
+    {a:"VISUALIZE",c:"\"If you can ___ it, you can do it\"",src:"Lecture 4"},
+    {a:"SCIENTIST",c:"Adam Grant's ideal mode: tests hypotheses, defines self by values",src:"Lecture 5"},
+    {a:"DOPAMINE",c:"Serotonin from genuine connection is even better than this",src:"Lecture 4"},
+    {a:"PREACHER",c:"Adam Grant danger mode #1: says \"I am always right\"",src:"Lecture 5"},
+    {a:"CRUCIBLE",c:"Decision Making ___ — Class 5 game: stop overthinking, start mapping",src:"Lecture 5"},
+    {a:"HUMILITY",c:"\"Confident ___\" zone: ideal balance on the confidence spectrum",src:"Lecture 5"},
+    {a:"REFRAME",c:"The core skill of the Worst Idea Pivot exercise",src:"Lecture 5"},
+    {a:"PIVOT",c:"Scientific thinkers did this sooner AND earned 3X more revenue",src:"Lecture 5"},
+    {a:"GRANT",c:"Adam ___, organizational psychologist; wrote \"Think Again\"",src:"Lecture 5"},
+    {a:"SWOT",c:"Strengths, Weaknesses, Opportunities, Threats",src:"Lecture 5"},
+    {a:"WOOP",c:"Wish, Outcome, Obstacle, Plan — intention-setting technique",src:"Lecture 4"},
+    {a:"SOOD",c:"Dr. Amit ___, Mayo Clinic physician",src:"Lecture 4"},
+    {a:"EIGHTY",c:"Perspective is worth ___ IQ points",src:"Lecture 4"},
+  ]},
+  { id:4, title:"The Mountain", sub:"Lectures 6–7 — Everest & Risk", words:[
+    {a:"HEURISTICS",c:"\"Rules of thumb\" for quick decisions under uncertainty",src:"Lecture 7"},
+    {a:"TURNAROUND",c:"The 2pm ___ rule: the heuristic too many climbers violated",src:"Lecture 7"},
+    {a:"DISRUPTION",c:"Lauren Hassen helps leaders thrive through this",src:"Lecture 8"},
+    {a:"BASECAMP",c:"The 5,300m staging ground for Everest expeditions",src:"Lecture 7"},
+    {a:"COUPLING",c:"\"Tight ___\": one dominant path, little slack — an organizational flaw",src:"Lecture 7"},
+    {a:"IDENTITY",c:"Class 6's magic attendance word; what resilience protects",src:"Lecture 6"},
+    {a:"SCENARIO",c:"___ planning: mapping 6 possible post-college futures",src:"Lecture 6"},
+    {a:"MAPPING",c:"\"___ Your Future\" — Class 6's subtitle",src:"Lecture 6"},
+    {a:"EVEREST",c:"Harvard case study: what went fatally wrong on this mountain?",src:"Lecture 6"},
+    {a:"CARLSON",c:"Matt ___, Adobe Director of UX Design; guest speaker",src:"Lecture 6"},
+    {a:"LEVINE",c:"Alison ___, first American Women's Everest Expedition captain",src:"Lecture 7"},
+    {a:"SUMMIT",c:"At 8,848m, the peak every climber risked their life to reach",src:"Lecture 7"},
+    {a:"SHERPA",c:"Expert high-altitude guide; backbone of every expedition",src:"Lecture 7"},
+    {a:"HALL",c:"Rob ___, died on Everest after a final radio call",src:"Lecture 7"},
+    {a:"BECK",c:"___ Weathers: the Everest survivor",src:"Lecture 7"},
+    {a:"BIAS",c:"Cognitive ___: blind spots in the Everest analysis",src:"Lecture 7"},
+    {a:"FISCHER",c:"Scott ___, expedition leader in the 1996 Everest case",src:"Lecture 7"},
+    {a:"AGILITY",c:"Module 3's core theme: anchor in ___, not static consistency",src:"Lecture 6"},
+  ]},
+  { id:5, title:"Speak Up", sub:"Lectures 8–10 — Connection & Purpose", words:[
+    {a:"FORGIVENESS",c:"The fifth and hardest of the Five Principles to Reframe",src:"Lecture 13"},
+    {a:"IMAGINABLE",c:"Jane McGonigal's book; inspired \"trace a C\"",src:"Lecture 10"},
+    {a:"COMPASSION",c:"One of the Five Principles: gratitude, ___, acceptance, purpose, forgiveness",src:"Lecture 13"},
+    {a:"INFLECTION",c:"___ point: key trigger moment when a pivot becomes necessary",src:"Lecture 8"},
+    {a:"BELONGING",c:"One of the four Purpose Domains — need to feel part of a community",src:"Lecture 13"},
+    {a:"RECOGNIZE",c:"Step 1 of the Three Steps: ___, Remove, Reframe",src:"Lecture 13"},
+    {a:"NORTHSTAR",c:"Your guiding purpose: interesting, no ceiling, and altruistic",src:"Lecture 13"},
+    {a:"FAIRNESS",c:"Elaine Lin Hering adds \"Plus ___\" to her framework",src:"Lecture 10"},
+    {a:"BECOMING",c:"Purpose Domain: Building, ___, Belonging, Believing",src:"Lecture 13"},
+    {a:"SILENCE",c:"Elaine Lin Hering's 2024 book is about \"Unlearning\" this",src:"Lecture 9"},
+    {a:"JOHARI",c:"The ___ Window: known/unknown to yourself vs. others",src:"Lecture 10"},
+    {a:"HERING",c:"Elaine Lin ___, author of \"Unlearning Silence\"",src:"Lecture 9"},
+    {a:"REBOOT",c:"\"Project ___\": describe a time your perspective changed",src:"Lecture 9"},
+    {a:"YUAN",c:"Han-Shen ___, CTO/CPO at eBay, Netflix, Upwork",src:"Lecture 9"},
+    {a:"WEST",c:"Dr. Tessa ___, NYU professor on uncomfortable truths",src:"Lecture 13"},
+    {a:"SUNK",c:"The ___ cost fallacy: continuing because of what you already lost",src:"Lecture 8"},
+  ]},
+  { id:6, title:"Final Review", sub:"All Lectures — Grand Tour", words:[
+    {a:"SPRINGBOARD",c:"\"Applied Resilience: Your Innovation ___\"",src:"Lecture 1"},
+    {a:"SUPERPOWERS",c:"\"We all have hidden ___; they could be resilience, empathy, or humor\"",src:"Lecture 7"},
+    {a:"KILLSWITCH",c:"The one data point that makes you immediately reverse a decision",src:"Lecture 5"},
+    {a:"BLACKBERRY",c:"Mike Lazaridis's company — cautionary tale of failing to rethink",src:"Lecture 5"},
+    {a:"CONNECTION",c:"Talking to strangers boosts this more than solitude",src:"Lecture 4"},
+    {a:"SEROTONIN",c:"Listening to others promotes this brain chemical",src:"Lecture 4"},
+    {a:"SUFFERING",c:"Jensen Huang: \"I hope ___ happens to you\"",src:"Lecture 1"},
+    {a:"IMPOSTER",c:"___ Syndrome: MIT says it makes you work harder",src:"Lecture 5"},
+    {a:"KINDNESS",c:"\"Self-___\": your intrinsic value is always 100 cents",src:"Lecture 3"},
+    {a:"KAHNEMAN",c:"Nobel laureate behind \"Thinking, Fast and Slow\"",src:"Lecture 1"},
+    {a:"PRONOIA",c:"Opposite of paranoia — universe conspiring IN your favor",src:"Lecture 3"},
+    {a:"RECENCY",c:"___ bias: overweighting the most recent events",src:"Lecture 8"},
+    {a:"AGILITY",c:"Module 3 theme: anchor in ___, not static consistency",src:"Lecture 6"},
+    {a:"WINDOW",c:"Class 9's attendance word; perspective opens new ones",src:"Lecture 9"},
+    {a:"BUNCH",c:"Selcuk Atli's company — the pivot story in Class 8",src:"Lecture 8"},
+    {a:"RUM",c:"Dr. Sood's acronym: Relentlessly Unguided Mind",src:"Lecture 3"},
+  ]}
+];
+
+const CN_PUZZLES = [
+  { id:1, title:"Course Essentials", groups:[
+    {cat:"Resilience Attitudes",color:"var(--conn-yellow)",words:["GROWTH","FIXED","GRIT","BOUNCE"]},
+    {cat:"Steps in the Resilience Tool",color:"var(--conn-green)",words:["PRACTICE","EXPERIMENT","EVALUATE","SHARE"]},
+    {cat:"Researchers & Professors",color:"var(--conn-blue)",words:["DWECK","SOOD","GRANT","CRUM"]},
+    {cat:"Fun Things in the Course",color:"var(--conn-purple)",words:["LEGO","TETRIS","DONUT","CARNIVAL"]},
+  ]},
+  { id:2, title:"Mountain & Mind", groups:[
+    {cat:"On the Mountain",color:"var(--conn-yellow)",words:["SUMMIT","SHERPA","BASECAMP","EVEREST"]},
+    {cat:"Mental Health Challenges",color:"var(--conn-green)",words:["ANXIETY","BURNOUT","LONELINESS","WORRY"]},
+    {cat:"Nature Patterns & Elements",color:"var(--conn-blue)",words:["FIRE","EARTH","SPIRALS","FRACTALS"]},
+    {cat:"Everest People",color:"var(--conn-purple)",words:["HALL","BECK","LEVINE","FISCHER"]},
+  ]},
+  { id:3, title:"Frameworks & Thinkers", groups:[
+    {cat:"Adam Grant's Four Modes",color:"var(--conn-yellow)",words:["SCIENTIST","PREACHER","PROSECUTOR","POLITICIAN"]},
+    {cat:"Named Frameworks (Acronyms)",color:"var(--conn-green)",words:["SWOT","WOOP","SMART","JOHARI"]},
+    {cat:"Brain Science Words",color:"var(--conn-blue)",words:["SEROTONIN","DOPAMINE","OLFACTORY","PERCEPTION"]},
+    {cat:"Authors & Academics",color:"var(--conn-purple)",words:["PROUST","KAHNEMAN","HERING","WEST"]},
+  ]},
+  { id:4, title:"Values & Purpose", groups:[
+    {cat:"Five Principles to Reframe",color:"var(--conn-yellow)",words:["GRATITUDE","COMPASSION","FORGIVENESS","KINDNESS"]},
+    {cat:"Resilience Action Verbs",color:"var(--conn-green)",words:["SILENCE","REFRAME","REBOOT","RECOGNIZE"]},
+    {cat:"Purpose & Self",color:"var(--conn-blue)",words:["BELONGING","BECOMING","NORTHSTAR","IDENTITY"]},
+    {cat:"Guest Speakers",color:"var(--conn-purple)",words:["HASSEN","YUAN","CARLSON","WIERSMA"]},
+  ]},
+];
+
+const WL_WORDS = [
+  {a:"AGILE",c:"___ Thinking: Module 3 of the course",src:"Lecture 1"},
+  {a:"FIXED",c:"___ mindset: \"This is too hard. I can't do this.\"",src:"Lecture 1"},
+  {a:"SHARE",c:"The final step of the Proposed Resilience Tool",src:"Lecture 1"},
+  {a:"TIGER",c:"Vicky's childhood spirit animal",src:"Lecture 1"},
+  {a:"PINKY",c:"In the class contract, this finger means \"stay safe\"",src:"Lecture 1"},
+  {a:"EARTH",c:"4-elements pressure exercise: \"hold your ground\"",src:"Lecture 2"},
+  {a:"FORTY",c:"Lyubomirsky: ___% of happiness is under your control",src:"Lecture 1"},
+  {a:"WORRY",c:"Dr. Sood says to schedule \"___ time\"",src:"Lecture 4"},
+  {a:"PIVOT",c:"Scientific thinkers did this sooner AND earned 3X revenue",src:"Lecture 5"},
+  {a:"SMART",c:"Stress Management And Resiliency Training",src:"Lecture 3"},
+  {a:"DONUT",c:"The sweetest magic word — Class 3's attendance code",src:"Lecture 3"},
+  {a:"GRANT",c:"Adam ___, author of \"Think Again\"",src:"Lecture 5"},
+  {a:"BUNCH",c:"Selcuk Atli's company — a Class 8 pivot story",src:"Lecture 8"},
+  {a:"DWECK",c:"Stanford professor Carol ___, growth vs. fixed mindset",src:"Lecture 1"},
+  {a:"RUBIN",c:"Gretchen ___, \"Life in Five Senses\" author",src:"Lecture 2"},
+  {a:"YANNY",c:"Half the internet heard this name; others heard \"Laurel\"",src:"Lecture 2"},
+];
+
+// ============================
+// UTILITIES
+// ============================
+function rng(seed){let s=seed|0;return ()=>{s=(s*1664525+1013904223)|0;return(s>>>0)/4294967296}}
+function shuffle(a,r){const b=a.slice();for(let i=b.length-1;i>0;i--){const j=Math.floor(r()*((i)+1));[b[i],b[j]]=[b[j],b[i]]}return b}
+function $(id){return document.getElementById(id)}
+function fmtTime(t){return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')}
+function closeModal(){$('modalBg').classList.remove('active')}
+function showModal(html){$('modalContent').innerHTML=html;$('modalBg').classList.add('active')}
+
+let currentView='hub';
+function hub(){
+  currentView='hub';
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  $('hubView').style.display='';
+  $('navBack').classList.remove('show');
+  $('navBrand').innerHTML='Applied Resilience <small>Games</small>';
+  $('navTimer').style.display='none';
+  $('navActions').innerHTML='';
+  if(cw.timerInt) clearInterval(cw.timerInt);
+}
+
+function showGame(g){
+  $('hubView').style.display='none';
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  $('navBack').classList.add('show');
+  $('navTimer').style.display='none';
+  $('navActions').innerHTML='';
+  currentView=g;
+  if(g==='crossword'){cw.init()}
+  else if(g==='connections'){cn.init()}
+  else if(g==='wordle'){wl.init()}
+}
+
+// ============================
+// CROSSWORD GENERATOR
+// ============================
+function genCrossword(words,seed){
+  const SIZE=17,r=rng(seed);let best=null,bestS=-1;
+  for(let a=0;a<60;a++){const res=tryGen(words,SIZE,r);const bb=bbox(res.placed,SIZE);const area=(bb.mr-bb.r+1)*(bb.mc-bb.c+1);const d=res.placed.reduce((s,p)=>s+p.a.length,0)/Math.max(area,1);const sc=res.placed.length*200+res.ints*20+d*300;if(sc>bestS){bestS=sc;best=res}}
+  return trim(best);
+}
+function tryGen(words,SZ,r){
+  const g=Array.from({length:SZ},()=>Array(SZ).fill(null)),pl=[];let ti=0;
+  const s=words.slice().sort((a,b)=>b.a.length-a.a.length);
+  const sh=[s[0],...shuffle(s.slice(1),r)];
+  const f=sh[0],sc=Math.floor((SZ-f.a.length)/2),sr=Math.floor(SZ/2);
+  pw(g,f.a,sr,sc,'a');pl.push({...f,row:sr,col:sc,dir:'a'});
+  for(let w=1;w<sh.length;w++){
+    const word=sh[w];let bp=null,bs=-1;
+    for(let r2=0;r2<SZ;r2++)for(let c2=0;c2<SZ;c2++){
+      if(g[r2][c2]===null)continue;
+      for(let i=0;i<word.a.length;i++){
+        if(word.a[i]!==g[r2][c2])continue;
+        const ac=c2-i,v1=cp(g,word.a,r2,ac,'a',SZ);
+        if(v1>0){const d=Math.abs(r2-SZ/2)+Math.abs(ac+word.a.length/2-SZ/2);const s2=v1*20-d*2;if(s2>bs){bs=s2;bp={row:r2,col:ac,dir:'a',ints:v1}}}
+        const ar=r2-i,v2=cp(g,word.a,ar,c2,'d',SZ);
+        if(v2>0){const d=Math.abs(ar+word.a.length/2-SZ/2)+Math.abs(c2-SZ/2);const s2=v2*20-d*2;if(s2>bs){bs=s2;bp={row:ar,col:c2,dir:'d',ints:v2}}}
+      }
+    }
+    if(bp){pw(g,word.a,bp.row,bp.col,bp.dir);pl.push({...word,row:bp.row,col:bp.col,dir:bp.dir});ti+=bp.ints}
+  }
+  return{grid:g,placed:pl,ints:ti,sz:SZ}
+}
+function cp(g,w,r,c,d,SZ){
+  const l=w.length,dr=d==='d'?1:0,dc=d==='a'?1:0;
+  if(r<0||c<0||r+dr*(l-1)>=SZ||c+dc*(l-1)>=SZ)return 0;
+  const br=r-dr,bc=c-dc;if(br>=0&&bc>=0&&g[br][bc]!==null)return 0;
+  const ar=r+dr*l,ac=c+dc*l;if(ar<SZ&&ac<SZ&&g[ar][ac]!==null)return 0;
+  let ints=0;
+  for(let i=0;i<l;i++){const cr=r+dr*i,cc=c+dc*i;
+    if(g[cr][cc]!==null){if(g[cr][cc]!==w[i])return 0;ints++}
+    else{if(d==='a'){if(cr>0&&g[cr-1][cc]!==null)return 0;if(cr<SZ-1&&g[cr+1][cc]!==null)return 0}
+    else{if(cc>0&&g[cr][cc-1]!==null)return 0;if(cc<SZ-1&&g[cr][cc+1]!==null)return 0}}}
+  return ints>0?ints:0
+}
+function pw(g,w,r,c,d){const dr=d==='d'?1:0,dc=d==='a'?1:0;for(let i=0;i<w.length;i++)g[r+dr*i][c+dc*i]=w[i]}
+function bbox(pl,SZ){let r=SZ,mr=0,c=SZ,mc=0;for(const p of pl){const dr=p.dir==='d'?1:0,dc=p.dir==='a'?1:0;r=Math.min(r,p.row);mr=Math.max(mr,p.row+dr*(p.a.length-1));c=Math.min(c,p.col);mc=Math.max(mc,p.col+dc*(p.a.length-1))}return{r,mr,c,mc}}
+function trim(res){
+  const{grid:g,placed:pl,ints,sz:SZ}=res;const{r:minR,mr:maxR,c:minC,mc:maxC}=bbox(pl,SZ);
+  const rows=maxR-minR+1,cols=maxC-minC+1;
+  const tg=Array.from({length:rows},(_,r)=>Array.from({length:cols},(_,c)=>g[r+minR][c+minC]));
+  const ap=pl.map(p=>({...p,row:p.row-minR,col:p.col-minC}));
+  const sc=new Map();
+  for(const p of ap){const k=p.row+','+p.col;if(!sc.has(k))sc.set(k,{});sc.get(k)[p.dir]=p}
+  const sk=[...sc.keys()].sort((a,b)=>{const[ra,ca]=a.split(',').map(Number);const[rb,cb]=b.split(',').map(Number);return ra-rb||ca-cb});
+  let n=1;for(const k of sk){const d=sc.get(k);if(d.a)d.a.num=n;if(d.d)d.d.num=n;n++}
+  const across=ap.filter(p=>p.dir==='a').sort((a,b)=>a.num-b.num);
+  const down=ap.filter(p=>p.dir==='d').sort((a,b)=>a.num-b.num);
+  const cm=Array.from({length:rows},()=>Array.from({length:cols},()=>({})));
+  for(const p of ap){const dr=p.dir==='d'?1:0,dc=p.dir==='a'?1:0;for(let i=0;i<p.a.length;i++){cm[p.row+dr*i][p.col+dc*i][p.dir]=p}cm[p.row][p.col].num=p.num}
+  return{grid:tg,placed:ap,across,down,cm,rows,cols,ints}
+}
+
+// ============================
+// CROSSWORD GAME
+// ============================
+const cw={
+  cache:{},st:null,timerInt:null,
+  init(){
+    $('cwView').classList.add('active');
+    $('navBrand').innerHTML='Crossword';
+    this.renderPicker();
+    this.load(1);
+  },
+  renderPicker(){
+    const el=$('cwPicker');el.innerHTML='';
+    CW_PUZZLES.forEach(p=>{
+      const b=document.createElement('button');
+      const sv=this.getSave(p.id);
+      b.textContent=p.title;
+      b.className=(sv&&sv.done?'done':'');
+      b.onclick=()=>this.load(p.id);
+      el.appendChild(b);
+    });
+  },
+  load(id){
+    if(this.timerInt)clearInterval(this.timerInt);
+    const pz=CW_PUZZLES.find(p=>p.id===id);
+    if(!this.cache[id])this.cache[id]=genCrossword(pz.words,id*7919+42);
+    const g=this.cache[id];
+    const sv=this.getSave(id);
+    this.st={id,pz,g,
+      ug:sv?sv.ug:Array.from({length:g.rows},()=>Array(g.cols).fill('')),
+      pg:sv?(sv.pg||Array.from({length:g.rows},()=>Array(g.cols).fill(false))):Array.from({length:g.rows},()=>Array(g.cols).fill(false)),
+      rg:sv?(sv.rg||Array.from({length:g.rows},()=>Array(g.cols).fill(false))):Array.from({length:g.rows},()=>Array(g.cols).fill(false)),
+      sr:null,sc:null,dir:'a',t:sv?sv.t||0:0,pencil:false,done:sv?sv.done||false:false,
+      ck:{},hints:sv?sv.hints||{}:{}
+    };
+    $('cwSub').textContent=pz.sub;
+    $('cwPicker').querySelectorAll('button').forEach((b,i)=>{
+      b.classList.toggle('active',CW_PUZZLES[i].id===id);
+    });
+    $('navTimer').style.display='';
+    this.renderActions();
+    this.renderGrid();
+    this.renderClues();
+    this.renderToolbar();
+    this.updTimer();
+    this.startTimer();
+    if(g.across.length)this.sel(g.across[0].row,g.across[0].col,'a');
+  },
+  renderActions(){
+    $('navActions').innerHTML=`
+      <button onclick="cw.hint()">Hint</button>
+      <button onclick="cw.checkWord()">Check</button>
+      <button onclick="cw.revealWord()">Reveal</button>`;
+  },
+  renderGrid(){
+    const{g}=this.st;const el=$('cwGrid');
+    const mx=Math.max(g.rows,g.cols);let cs=38;
+    if(mx>18)cs=30;else if(mx>14)cs=34;
+    if(window.innerWidth<600)cs=Math.min(cs,Math.floor((window.innerWidth-48)/g.cols));
+    el.style.setProperty('--cell',cs+'px');
+    el.style.gridTemplateColumns=`repeat(${g.cols},var(--cell))`;
+    el.innerHTML='';
+    for(let r=0;r<g.rows;r++)for(let c=0;c<g.cols;c++){
+      const d=document.createElement('div');d.className='cw-cell';d.dataset.r=r;d.dataset.c=c;
+      if(g.grid[r][c]===null){d.classList.add('black')}
+      else{
+        const m=g.cm[r][c];
+        if(m.num){const s=document.createElement('span');s.className='n';s.textContent=m.num;d.appendChild(s)}
+        const l=document.createElement('span');l.className='l';d.appendChild(l);
+        d.onclick=e=>{e.stopPropagation();this.click(r,c)}
+      }
+      el.appendChild(d);
+    }
+    this.upd();
+  },
+  upd(){
+    const{g,ug,pg,rg,sr,sc:scc,dir,ck}=this.st;
+    const wc=this.wordCells(sr,scc,dir);const ws=new Set(wc.map(([r,c])=>r+','+c));
+    $('cwGrid').querySelectorAll('.cw-cell').forEach(cell=>{
+      const r=+cell.dataset.r,c=+cell.dataset.c;
+      if(g.grid[r][c]===null)return;
+      cell.classList.remove('hl-word','hl-cell');
+      if(r===sr&&c===scc)cell.classList.add('hl-cell');
+      else if(ws.has(r+','+c))cell.classList.add('hl-word');
+      const le=cell.querySelector('.l');
+      if(le){le.textContent=ug[r][c];le.className='l';
+        if(pg[r][c]&&ug[r][c])le.classList.add('pencil');
+        if(rg[r][c])le.classList.add('revealed');
+        if(ck[r+','+c]==='wrong')le.classList.add('wrong');
+      }
+      cell.querySelector('.err')?.remove();
+      if(ck[r+','+c]==='wrong'){const m=document.createElement('div');m.className='err';cell.appendChild(m)}
+    });
+    this.updClueBar();this.updClueHL();
+  },
+  wordCells(r,c,d){
+    if(r===null)return[];const m=this.st.g.cm[r]?.[c];if(!m)return[];
+    let w=m[d];if(!w){d=d==='a'?'d':'a';w=m[d]}if(!w)return[];
+    const dr=d==='d'?1:0,dc=d==='a'?1:0;
+    return Array.from({length:w.a.length},(_,i)=>[w.row+dr*i,w.col+dc*i]);
+  },
+  curWord(){
+    const{sr,sc:scc,dir,g}=this.st;if(sr===null)return null;
+    const m=g.cm[sr]?.[scc];if(!m)return null;
+    let w=m[dir];if(!w)w=m[dir==='a'?'d':'a'];return w||null;
+  },
+  updClueBar(){
+    const w=this.curWord();
+    $('cwClueNum').textContent=w?`${w.num}${w.dir==='a'?'A':'D'}`:'';
+    $('cwClueText').textContent=w?w.c:'Select a cell to begin';
+  },
+  updClueHL(){
+    const w=this.curWord();
+    document.querySelectorAll('.cw-clue').forEach(el=>{
+      el.classList.remove('active');
+      if(w&&el.dataset.d===w.dir&&+el.dataset.n===w.num){el.classList.add('active');el.scrollIntoView({block:'nearest',behavior:'smooth'})}
+    });
+  },
+  renderClues(){
+    const{g}=this.st;const el=$('cwClues');el.innerHTML='';
+    const mk=(title,list,d)=>{
+      const s=document.createElement('div');s.className='cw-clues-sec';
+      s.innerHTML=`<div class="cw-clues-hd">${title}</div>`;
+      list.forEach(w=>{
+        const item=document.createElement('div');item.className='cw-clue';item.dataset.d=d;item.dataset.n=w.num;
+        item.innerHTML=`<span class="cw-clue-n">${w.num}</span><span>${w.c}</span>`;
+        item.onclick=()=>this.sel(w.row,w.col,d);
+        s.appendChild(item);
+      });
+      el.appendChild(s);
+    };
+    mk('Across',g.across,'a');mk('Down',g.down,'d');
+  },
+  renderToolbar(){
+    $('cwToolbar').innerHTML=`
+      <button id="penBtn" onclick="cw.togglePen()">Pencil</button>
+      <span class="sep"></span>
+      <button onclick="cw.clearPuzzle()">Clear</button>
+      <button onclick="cw.resetPuzzle()">Reset</button>`;
+  },
+  togglePen(){this.st.pencil=!this.st.pencil;$('penBtn').classList.toggle('on',this.st.pencil)},
+  // INPUT
+  click(r,c){
+    const{sr,sc:scc,dir,g}=this.st;const m=g.cm[r][c];
+    if(r===sr&&c===scc){const nd=dir==='a'?'d':'a';if(m[nd])this.st.dir=nd}
+    else{if(!m[dir]&&m[dir==='a'?'d':'a'])this.st.dir=dir==='a'?'d':'a'}
+    this.st.sr=r;this.st.sc=c;this.upd();$('hiddenInput').focus();
+  },
+  sel(r,c,d){this.st.sr=r;this.st.sc=c;if(d)this.st.dir=d;this.upd();$('hiddenInput').focus()},
+  key(e){
+    if(currentView!=='crossword'||!this.st||this.st.done)return;
+    const{sr,sc:scc}=this.st;if(sr===null)return;
+    if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){e.preventDefault();this.arrow(e.key);return}
+    if(e.key==='Tab'){e.preventDefault();this.jump(e.shiftKey);return}
+    if(e.key==='Backspace'||e.key==='Delete'){e.preventDefault();this.bksp();return}
+    if(e.key===' '){e.preventDefault();const m=this.st.g.cm[sr][scc];const nd=this.st.dir==='a'?'d':'a';if(m[nd])this.st.dir=nd;this.upd();return}
+    if(/^[a-zA-Z]$/.test(e.key)){e.preventDefault();this.enter(e.key.toUpperCase())}
+  },
+  enter(ch){
+    const{sr:r,sc:c,g,ug,pg,rg,ck}=this.st;if(r===null||g.grid[r][c]===null)return;
+    ug[r][c]=ch;pg[r][c]=this.st.pencil;rg[r][c]=false;delete ck[r+','+c];
+    this.adv();this.upd();this.save();this.chkDone();
+  },
+  bksp(){
+    const{sr:r,sc:c,ug,ck}=this.st;if(r===null)return;
+    if(ug[r][c]){ug[r][c]='';delete ck[r+','+c];this.upd();this.save()}
+    else{this.ret();const{sr:nr,sc:nc}=this.st;if(nr!==null){ug[nr][nc]='';delete ck[nr+','+nc];this.upd();this.save()}}
+  },
+  adv(){const{sr:r,sc:c,dir,g}=this.st;const dr=dir==='d'?1:0,dc=dir==='a'?1:0;const nr=r+dr,nc=c+dc;if(nr<g.rows&&nc<g.cols&&g.grid[nr]?.[nc]!=null){this.st.sr=nr;this.st.sc=nc}},
+  ret(){const{sr:r,sc:c,dir,g}=this.st;const dr=dir==='d'?1:0,dc=dir==='a'?1:0;const nr=r-dr,nc=c-dc;if(nr>=0&&nc>=0&&g.grid[nr]?.[nc]!=null){this.st.sr=nr;this.st.sc=nc}},
+  arrow(k){
+    const{sr:r,sc:c,g}=this.st;const dm={ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1]};
+    const[dr,dc]=dm[k];if(dr)this.st.dir='d';if(dc)this.st.dir='a';
+    let nr=r+dr,nc=c+dc;
+    while(nr>=0&&nr<g.rows&&nc>=0&&nc<g.cols){if(g.grid[nr][nc]!==null){this.st.sr=nr;this.st.sc=nc;break}nr+=dr;nc+=dc}
+    this.upd();
+  },
+  jump(back){
+    const w=this.curWord();if(!w)return;const{g}=this.st;
+    const all=[...g.across,...g.down];let i=all.findIndex(x=>x.num===w.num&&x.dir===w.dir);
+    i=back?i-1:i+1;if(i<0)i=all.length-1;if(i>=all.length)i=0;
+    this.sel(all[i].row,all[i].col,all[i].dir);
+  },
+  // HINT SYSTEM — infinite, cycles through creative hints then keeps revealing letters
+  hint(){
+    const w=this.curWord();if(!w)return;
+    const key=w.num+'_'+w.dir;
+    const level=(this.st.hints[key]||0);
+    const{ug,g}=this.st;
+    const dr=w.dir==='d'?1:0,dc=w.dir==='a'?1:0;
+
+    const revealOne=()=>{
+      const empty=[];
+      for(let i=0;i<w.a.length;i++){const r=w.row+dr*i,c=w.col+dc*i;if(ug[r][c]!==g.grid[r][c])empty.push(i)}
+      if(empty.length){const pick=empty[Math.floor(Math.random()*empty.length)];
+        const r=w.row+dr*pick,c=w.col+dc*pick;ug[r][c]=g.grid[r][c];this.st.rg[r][c]=true}
+      this.st.hints[key]=level+1;this.upd();this.save();this.chkDone();
+    };
+
+    if(level===0){
+      revealOne();
+    }else if(level===1){
+      showModal(`<h3>Source Hint</h3><p>This word comes from:</p><p style="font-size:20px;font-weight:700;margin:16px 0">${w.src}</p><button onclick="closeModal()">Got it</button>`);
+      this.st.hints[key]=2;this.save();
+    }else if(level===2){
+      const letters=w.a.split('');
+      for(let i=letters.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[letters[i],letters[j]]=[letters[j],letters[i]]}
+      showModal(`<h3>Unscramble</h3><p>The answer's letters, scrambled:</p><div class="scramble">${letters.join(' ')}</div><button onclick="closeModal()">Got it</button>`);
+      this.st.hints[key]=3;this.save();
+    }else{
+      revealOne();
+    }
+  },
+  // CHECK / REVEAL
+  checkWord(){
+    const w=this.curWord();if(!w)return;const{ug,g,ck}=this.st;
+    const dr=w.dir==='d'?1:0,dc=w.dir==='a'?1:0;
+    for(let i=0;i<w.a.length;i++){const r=w.row+dr*i,c=w.col+dc*i;
+      if(ug[r][c])ck[r+','+c]=ug[r][c]===g.grid[r][c]?'ok':'wrong'}
+    this.upd();
+  },
+  revealWord(){
+    const w=this.curWord();if(!w)return;const{ug,g,rg,ck}=this.st;
+    const dr=w.dir==='d'?1:0,dc=w.dir==='a'?1:0;
+    for(let i=0;i<w.a.length;i++){const r=w.row+dr*i,c=w.col+dc*i;ug[r][c]=g.grid[r][c];rg[r][c]=true;delete ck[r+','+c]}
+    this.upd();this.save();this.chkDone();
+  },
+  clearPuzzle(){
+    const{ug,g,rg}=this.st;for(let r=0;r<g.rows;r++)for(let c=0;c<g.cols;c++){if(g.grid[r][c]!=null&&!rg[r][c])ug[r][c]=''}
+    this.st.ck={};this.upd();this.save();
+  },
+  resetPuzzle(){
+    const{ug,g,pg,rg}=this.st;
+    for(let r=0;r<g.rows;r++)for(let c=0;c<g.cols;c++){ug[r][c]='';pg[r][c]=false;rg[r][c]=false}
+    this.st.ck={};this.st.hints={};this.st.t=0;this.st.done=false;this.upd();this.save();this.updTimer();
+  },
+  // TIMER
+  startTimer(){if(this.timerInt)clearInterval(this.timerInt);if(this.st.done)return;
+    this.timerInt=setInterval(()=>{this.st.t++;this.updTimer()},1000)},
+  updTimer(){$('navTimer').textContent=fmtTime(this.st?this.st.t:0)},
+  // COMPLETION
+  chkDone(){
+    const{ug,g}=this.st;
+    for(let r=0;r<g.rows;r++)for(let c=0;c<g.cols;c++){if(g.grid[r][c]!=null&&ug[r][c]!==g.grid[r][c])return}
+    this.st.done=true;clearInterval(this.timerInt);this.save();
+    const hc=Object.keys(this.st.hints).length;
+    showModal(`<h2>Puzzle Complete!</h2><p>${this.st.pz.title}</p>
+      <div class="stats"><div><div class="stat-v">${fmtTime(this.st.t)}</div><div class="stat-l">Time</div></div>
+      <div><div class="stat-v">${this.st.g.placed.length}</div><div class="stat-l">Words</div></div>
+      <div><div class="stat-v">${hc}</div><div class="stat-l">Hints</div></div></div>
+      <button onclick="closeModal()">Continue</button>`);
+    this.renderPicker();
+  },
+  // PERSIST
+  save(){if(!this.st)return;try{localStorage.setItem('cw_'+this.st.id,JSON.stringify({ug:this.st.ug,pg:this.st.pg,rg:this.st.rg,t:this.st.t,done:this.st.done,hints:this.st.hints}))}catch(e){}},
+  getSave(id){try{const r=localStorage.getItem('cw_'+id);return r?JSON.parse(r):null}catch(e){return null}},
+};
+
+// ============================
+// CONNECTIONS GAME
+// ============================
+const cn={
+  st:null,
+  init(){
+    $('cnView').classList.add('active');
+    $('navBrand').innerHTML='Connections';
+    this.renderPicker();
+    this.load(1);
+  },
+  renderPicker(){
+    const el=$('cnPicker');el.innerHTML='';
+    CN_PUZZLES.forEach(p=>{
+      const b=document.createElement('button');
+      const sv=this.getSave(p.id);
+      b.textContent=p.title;
+      b.className=(sv&&sv.done?'done':'');
+      b.onclick=()=>this.load(p.id);
+      el.appendChild(b);
+    });
+  },
+  load(id){
+    const pz=CN_PUZZLES.find(p=>p.id===id);
+    const sv=this.getSave(id);
+    const allWords=pz.groups.flatMap(g=>g.words);
+    const r=rng(id*3571);
+    this.st={
+      id,pz,
+      remaining:sv?sv.remaining:shuffle(allWords,r),
+      found:sv?sv.found:[],
+      selected:[],
+      lives:sv?sv.lives:4,
+      done:sv?sv.done:false,
+      msg:''
+    };
+    $('cnPicker').querySelectorAll('button').forEach((b,i)=>b.classList.toggle('active',CN_PUZZLES[i].id===id));
+    this.render();
+  },
+  render(){
+    const{pz,remaining,found,selected,lives,done,msg}=this.st;
+    // Found groups
+    const fEl=$('cnFound');fEl.innerHTML='';
+    found.forEach(gIdx=>{
+      const g=pz.groups[gIdx];
+      const row=document.createElement('div');row.className='cn-found-row';
+      row.style.background=g.color;
+      row.innerHTML=`<div class="cat">${g.cat}</div><div class="words">${g.words.join(', ')}</div>`;
+      fEl.appendChild(row);
+    });
+    // Grid
+    const gEl=$('cnGrid');gEl.innerHTML='';
+    remaining.forEach(w=>{
+      const t=document.createElement('div');t.className='cn-tile';
+      if(selected.includes(w))t.classList.add('selected');
+      t.textContent=w;
+      t.onclick=()=>{if(done)return;this.toggleSel(w)};
+      gEl.appendChild(t);
+    });
+    // Message
+    $('cnMsg').textContent=msg;
+    // Controls
+    const cEl=$('cnControls');
+    if(done){
+      cEl.innerHTML=`<button onclick="cn.reset()">Play Again</button>`;
+    }else{
+      cEl.innerHTML=`
+        <button onclick="cn.shuffleRemaining()">Shuffle</button>
+        <button onclick="cn.deselect()">Deselect All</button>
+        <button class="primary" ${selected.length!==4?'disabled':''} onclick="cn.submit()">Submit</button>`;
+    }
+    // Lives
+    const lEl=$('cnLives');lEl.innerHTML='<span>Mistakes remaining:</span>';
+    for(let i=0;i<4;i++){const d=document.createElement('div');d.className='cn-dot'+(i>=lives?' lost':'');lEl.appendChild(d)}
+  },
+  toggleSel(w){
+    const{selected}=this.st;
+    const i=selected.indexOf(w);
+    if(i>=0)selected.splice(i,1);
+    else if(selected.length<4)selected.push(w);
+    this.st.msg='';
+    this.render();
+  },
+  deselect(){this.st.selected=[];this.st.msg='';this.render()},
+  shuffleRemaining(){
+    const r=rng(Date.now());
+    this.st.remaining=shuffle(this.st.remaining,r);
+    this.render();
+  },
+  submit(){
+    const{selected,pz,remaining,found}=this.st;
+    if(selected.length!==4)return;
+    // Check if selection matches any group
+    let matchIdx=-1;
+    for(let i=0;i<pz.groups.length;i++){
+      if(found.includes(i))continue;
+      const gw=pz.groups[i].words;
+      if(selected.every(w=>gw.includes(w))&&gw.every(w=>selected.includes(w))){matchIdx=i;break}
+    }
+    if(matchIdx>=0){
+      found.push(matchIdx);
+      this.st.remaining=remaining.filter(w=>!selected.includes(w));
+      this.st.selected=[];
+      this.st.msg='';
+      if(found.length===4){
+        this.st.done=true;
+        setTimeout(()=>showModal(`<h2>Nice!</h2><p>You found all 4 groups!</p><div class="stats"><div><div class="stat-v">${4-this.st.lives}</div><div class="stat-l">Mistakes</div></div></div><button onclick="closeModal()">Continue</button>`),500);
+      }
+      this.save();this.render();this.renderPicker();
+    }else{
+      // Check "one away"
+      let oneAway=false;
+      for(let i=0;i<pz.groups.length;i++){
+        if(found.includes(i))continue;
+        const gw=pz.groups[i].words;
+        const overlap=selected.filter(w=>gw.includes(w)).length;
+        if(overlap===3){oneAway=true;break}
+      }
+      this.st.lives--;
+      this.st.msg=oneAway?'One away!':'Not quite...';
+      this.st.selected=[];
+      if(this.st.lives<=0){
+        this.st.done=true;
+        // Reveal all remaining
+        for(let i=0;i<pz.groups.length;i++){if(!found.includes(i))found.push(i)}
+        this.st.remaining=[];
+        this.st.msg='';
+        setTimeout(()=>showModal(`<h2>Better luck next time!</h2><p>All groups revealed above.</p><button onclick="closeModal()">OK</button>`),600);
+      }
+      this.save();this.render();
+      // Shake animation
+      if(!this.st.done){$('cnGrid').querySelectorAll('.cn-tile').forEach(t=>t.classList.add('shake'));setTimeout(()=>$('cnGrid').querySelectorAll('.cn-tile').forEach(t=>t.classList.remove('shake')),500)}
+    }
+  },
+  reset(){
+    localStorage.removeItem('cn_'+this.st.id);
+    this.load(this.st.id);
+  },
+  save(){if(!this.st)return;try{localStorage.setItem('cn_'+this.st.id,JSON.stringify({remaining:this.st.remaining,found:this.st.found,lives:this.st.lives,done:this.st.done}))}catch(e){}},
+  getSave(id){try{const r=localStorage.getItem('cn_'+id);return r?JSON.parse(r):null}catch(e){return null}},
+};
+
+// ============================
+// WORDLE GAME
+// ============================
+const wl={
+  st:null,
+  init(){
+    $('wlView').classList.add('active');
+    $('navBrand').innerHTML='Word Guess';
+    this.renderPicker();
+    this.load(1);
+  },
+  renderPicker(){
+    const el=$('wlPicker');el.innerHTML='';
+    for(let i=0;i<Math.min(WL_WORDS.length,8);i++){
+      const b=document.createElement('button');
+      const sv=this.getSave(i+1);
+      b.textContent='Game '+(i+1);
+      b.className=(sv&&sv.done?'done':'');
+      b.onclick=()=>this.load(i+1);
+      el.appendChild(b);
+    }
+  },
+  load(id){
+    const word=WL_WORDS[(id-1)%WL_WORDS.length];
+    const sv=this.getSave(id);
+    this.st={
+      id,word,
+      guesses:sv?sv.guesses:[],
+      current:'',
+      done:sv?sv.done:false,
+      won:sv?sv.won:false,
+      msg:sv&&sv.done?(sv.won?'Brilliant!':'The word was '+word.a):''
+    };
+    $('wlPicker').querySelectorAll('button').forEach((b,i)=>b.classList.toggle('active',i+1===id));
+    this.render();
+  },
+  render(){
+    const{word,guesses,current,done}=this.st;
+    const target=word.a;
+    // Grid
+    const gEl=$('wlGrid');gEl.innerHTML='';
+    for(let row=0;row<6;row++){
+      for(let col=0;col<5;col++){
+        const t=document.createElement('div');t.className='wl-tile';
+        if(row<guesses.length){
+          const g=guesses[row];const ch=g[col];t.textContent=ch;
+          if(ch===target[col])t.classList.add('correct');
+          else if(target.includes(ch))t.classList.add('present');
+          else t.classList.add('absent');
+        }else if(row===guesses.length&&col<current.length){
+          t.textContent=current[col];t.classList.add('filled');
+        }
+        gEl.appendChild(t);
+      }
+    }
+    // Message
+    $('wlMsg').textContent=this.st.msg;
+    // Keyboard
+    this.renderKB();
+  },
+  renderKB(){
+    const{guesses,done}=this.st;const target=this.st.word.a;
+    const rows=['QWERTYUIOP','ASDFGHJKL','ZXCVBNM'];
+    const kEl=$('wlKeyboard');kEl.innerHTML='';
+    const status={};
+    guesses.forEach(g=>{
+      for(let i=0;i<5;i++){
+        const ch=g[i];
+        if(ch===target[i])status[ch]='correct';
+        else if(target.includes(ch)){if(status[ch]!=='correct')status[ch]='present'}
+        else{if(!status[ch])status[ch]='absent'}
+      }
+    });
+    rows.forEach((r,ri)=>{
+      const row=document.createElement('div');row.className='wl-kb-row';
+      if(ri===2){const ent=document.createElement('button');ent.className='wl-key wide';ent.textContent='ENTER';ent.onclick=()=>this.submitGuess();row.appendChild(ent)}
+      r.split('').forEach(ch=>{
+        const k=document.createElement('button');k.className='wl-key';
+        if(status[ch])k.classList.add(status[ch]);
+        k.textContent=ch;k.onclick=()=>{if(!done)this.type(ch)};
+        row.appendChild(k);
+      });
+      if(ri===2){const del=document.createElement('button');del.className='wl-key wide';del.textContent='⌫';del.onclick=()=>this.delChar();row.appendChild(del)}
+      kEl.appendChild(row);
+    });
+  },
+  type(ch){
+    if(this.st.done||this.st.current.length>=5)return;
+    this.st.current+=ch;this.st.msg='';this.render();
+  },
+  delChar(){
+    if(this.st.done||!this.st.current.length)return;
+    this.st.current=this.st.current.slice(0,-1);this.render();
+  },
+  submitGuess(){
+    if(this.st.done)return;
+    const g=this.st.current;if(g.length!==5){this.st.msg='Not enough letters';this.render();return}
+    this.st.guesses.push(g);this.st.current='';
+    if(g===this.st.word.a){
+      this.st.done=true;this.st.won=true;this.st.msg='';
+      this.save();this.render();this.renderPicker();
+      setTimeout(()=>{
+        showModal(`<h2>Brilliant!</h2><p>You got it in ${this.st.guesses.length}/6</p>
+          <div class="clue-reveal"><strong>Clue:</strong> ${this.st.word.c}<br><strong>Source:</strong> ${this.st.word.src}</div>
+          <button onclick="closeModal()">Continue</button>`);
+      },400);
+    }else if(this.st.guesses.length>=6){
+      this.st.done=true;this.st.won=false;this.st.msg='The word was '+this.st.word.a;
+      this.save();this.render();this.renderPicker();
+      setTimeout(()=>{
+        showModal(`<h2>${this.st.word.a}</h2>
+          <div class="clue-reveal"><strong>Clue:</strong> ${this.st.word.c}<br><strong>Source:</strong> ${this.st.word.src}</div>
+          <button onclick="closeModal()">Continue</button>`);
+      },400);
+    }else{
+      this.st.msg='';this.save();this.render();
+    }
+  },
+  key(e){
+    if(currentView!=='wordle'||!this.st||this.st.done)return;
+    if(e.key==='Enter'){e.preventDefault();this.submitGuess();return}
+    if(e.key==='Backspace'){e.preventDefault();this.delChar();return}
+    if(/^[a-zA-Z]$/.test(e.key)){e.preventDefault();this.type(e.key.toUpperCase())}
+  },
+  save(){if(!this.st)return;try{localStorage.setItem('wl_'+this.st.id,JSON.stringify({guesses:this.st.guesses,done:this.st.done,won:this.st.won}))}catch(e){}},
+  getSave(id){try{const r=localStorage.getItem('wl_'+id);return r?JSON.parse(r):null}catch(e){return null}},
+};
+
+// ============================
+// INIT
+// ============================
+document.addEventListener('keydown',e=>{cw.key(e);wl.key(e)});
+const hi=$('hiddenInput');
+hi.addEventListener('input',()=>{const v=hi.value;hi.value='';if(v&&/[a-zA-Z]/.test(v))cw.enter(v.slice(-1).toUpperCase())});
+hi.addEventListener('keydown',e=>{if(e.key==='Backspace'){e.preventDefault();cw.bksp()}});
+$('modalBg').onclick=e=>{if(e.target===$('modalBg'))closeModal()};
+</script>
+</body>
+</html>
