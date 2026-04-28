@@ -75,6 +75,8 @@ a{color:inherit;text-decoration:none}
 .cw-cell .l.pencil{color:#aaa;font-weight:400}
 .cw-cell .l.revealed{color:var(--green-dark)}
 .cw-cell .l.wrong{color:#c9372c}
+.cw-cell .l.auto-correct{color:var(--green-dark)}
+.cw-cell .l.auto-wrong{color:#c9372c}
 .cw-cell .err{position:absolute;top:0;right:0;width:0;height:0;border-top:7px solid #c9372c;border-left:7px solid transparent}
 .cw-clues{flex:1;min-width:240px;max-height:calc(100vh - 200px);overflow-y:auto}
 .cw-clues-hd{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid var(--border)}
@@ -822,7 +824,7 @@ const cw={
       ug:sv?sv.ug:freshUg,
       pg:sv?(sv.pg||Array.from({length:g.rows},()=>Array(g.cols).fill(false))):Array.from({length:g.rows},()=>Array(g.cols).fill(false)),
       rg:sv?(sv.rg||freshRg):freshRg,
-      sr:null,sc:null,dir:'a',t:sv?sv.t||0:0,pencil:false,done:sv?sv.done||false:false,
+      sr:null,sc:null,dir:'a',t:sv?sv.t||0:0,pencil:false,autoCheck:false,done:sv?sv.done||false:false,
       ck:{},hints:sv?sv.hints||{}:{}
     };
     $('cwSub').textContent=pz.sub;
@@ -879,6 +881,7 @@ const cw={
         if(pg[r][c]&&ug[r][c])le.classList.add('pencil');
         if(rg[r][c])le.classList.add('revealed');
         if(ck[r+','+c]==='wrong')le.classList.add('wrong');
+        if(this.st.autoCheck&&ug[r][c]&&!rg[r][c])le.classList.add(ug[r][c]===g.grid[r][c]?'auto-correct':'auto-wrong');
       }
       cell.querySelector('.err')?.remove();
       if(ck[r+','+c]==='wrong'){const m=document.createElement('div');m.className='err';cell.appendChild(m)}
@@ -926,11 +929,13 @@ const cw={
   renderToolbar(){
     $('cwToolbar').innerHTML=`
       <button id="penBtn" onclick="cw.togglePen()">Pencil</button>
+      <button id="autoChkBtn" onclick="cw.toggleAutoCheck()">Auto-Check</button>
       <span class="sep"></span>
       <button onclick="cw.clearPuzzle()">Clear</button>
       <button onclick="cw.resetPuzzle()">Reset</button>`;
   },
   togglePen(){this.st.pencil=!this.st.pencil;$('penBtn').classList.toggle('on',this.st.pencil)},
+  toggleAutoCheck(){this.st.autoCheck=!this.st.autoCheck;$('autoChkBtn').classList.toggle('on',this.st.autoCheck);this.upd()},
   // INPUT
   click(r,c){
     const{sr,sc:scc,dir,g}=this.st;const m=g.cm[r][c];
@@ -1458,7 +1463,7 @@ const mini={
     $('miniView').classList.add('active');
     $('navBrand').innerHTML='Mini Crossword';
     $('navTimer').style.display='';
-    $('navActions').innerHTML='';
+    $('navActions').innerHTML='<button id="miniAutoChk" onclick="mini.toggleAutoCheck()">Auto-Check</button>';
     this.renderPicker();
     this.load(1);
   },
@@ -1486,7 +1491,7 @@ const mini={
     this.st={id,pz,g,
       ug:sv?sv.ug:Array.from({length:g.rows},()=>Array(g.cols).fill('')),
       rg:sv?(sv.rg||Array.from({length:g.rows},()=>Array(g.cols).fill(false))):Array.from({length:g.rows},()=>Array(g.cols).fill(false)),
-      sr:null,sc:null,dir:'a',t:sv?sv.t||0:0,done:sv?sv.done||false:false,ck:{}
+      sr:null,sc:null,dir:'a',t:sv?sv.t||0:0,done:sv?sv.done||false:false,ck:{},autoCheck:false
     };
     $('miniSub').textContent=pz.title;
     $('miniPicker').querySelectorAll('button').forEach((b,i)=>b.classList.toggle('active',MINI_PUZZLES[i].id===id));
@@ -1518,7 +1523,8 @@ const mini={
       if(r===sr&&c===scc)cell.classList.add('hl-cell');
       else if(ws2.has(r+','+c))cell.classList.add('hl-word');
       const le=cell.querySelector('.l');
-      if(le){le.textContent=ug[r][c];le.className='l';if(rg[r][c])le.classList.add('revealed')}
+      if(le){le.textContent=ug[r][c];le.className='l';if(rg[r][c])le.classList.add('revealed');
+        if(this.st.autoCheck&&ug[r][c]&&!rg[r][c])le.classList.add(ug[r][c]===g.grid[r][c]?'auto-correct':'auto-wrong')}
     });
     this.updClueBar();this.updClueHL();
   },
@@ -1570,6 +1576,7 @@ const mini={
     showModal(`<h2>Solved!</h2><p>${this.st.pz.title}</p><div class="stats"><div><div class="stat-v">${fmtTime(this.st.t)}</div><div class="stat-l">Time</div></div></div><button onclick="closeModal()">Continue</button>`);
     this.renderPicker();
   },
+  toggleAutoCheck(){this.st.autoCheck=!this.st.autoCheck;$('miniAutoChk').classList.toggle('on',this.st.autoCheck);this.upd()},
   startTimer(){if(this.timerInt)clearInterval(this.timerInt);if(this.st.done)return;this.timerInt=setInterval(()=>{this.st.t++;this.updTimer()},1000)},
   updTimer(){$('navTimer').textContent=fmtTime(this.st?this.st.t:0)},
   save(){if(!this.st)return;try{localStorage.setItem('mini_'+this.st.id,JSON.stringify({ug:this.st.ug,rg:this.st.rg,t:this.st.t,done:this.st.done}))}catch(e){}},
