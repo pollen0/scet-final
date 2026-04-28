@@ -99,12 +99,13 @@ a{color:inherit;text-decoration:none}
 .hint-popup button:hover{background:var(--bg-alt)}
 .hint-overlay{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:199;animation:fadeIn .2s}
 @keyframes popIn{from{transform:translate(-50%,-50%) scale(.9);opacity:0}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
+@keyframes modalIn{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 
 /* ===== CONNECTIONS ===== */
 .cn-board{max-width:500px;margin:0 auto}
 .cn-found{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
-.cn-found-row{border-radius:8px;padding:14px;text-align:center;animation:popIn .35s ease}
+.cn-found-row{border-radius:8px;padding:14px;text-align:center;animation:modalIn .35s ease}
 .cn-found-row .cat{font-weight:700;font-size:15px;text-transform:uppercase}
 .cn-found-row .words{font-size:14px;margin-top:3px}
 .cn-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
@@ -149,7 +150,7 @@ a{color:inherit;text-decoration:none}
 /* ===== MODAL ===== */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center}
 .modal-bg.active{display:flex}
-.modal{background:var(--bg);border-radius:12px;padding:36px;max-width:400px;width:90%;text-align:center;animation:popIn .35s ease}
+.modal{background:var(--bg);border-radius:12px;padding:36px;max-width:400px;width:90%;text-align:center;animation:modalIn .35s ease}
 .modal h2{font-family:Georgia,serif;font-size:26px;margin-bottom:4px}
 .modal p{color:var(--muted);font-size:14px;line-height:1.5;margin-bottom:8px}
 .modal .stats{display:flex;justify-content:center;gap:28px;margin:18px 0}
