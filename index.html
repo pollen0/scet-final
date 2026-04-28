@@ -161,6 +161,43 @@ a{color:inherit;text-decoration:none}
 .modal .clue-reveal{background:var(--bg-alt);border-radius:8px;padding:12px;margin:12px 0;font-size:14px;line-height:1.5;text-align:left}
 .modal .clue-reveal strong{color:var(--text)}
 
+/* ===== TEAM DASHBOARD ===== */
+.team-dash{background:var(--bg-alt);border:1px solid var(--border);border-radius:10px;padding:20px 24px;margin-bottom:24px}
+.team-header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.team-name{font-family:Georgia,serif;font-size:20px;font-weight:700;flex:1}
+.team-header button{padding:5px 12px;border:1px solid var(--border);border-radius:16px;font-size:12px;background:var(--bg);color:var(--muted)}
+.team-header button:hover{background:var(--border)}
+.team-progress{height:14px;background:var(--border);border-radius:7px;overflow:hidden;margin-bottom:14px}
+.team-progress-fill{height:100%;background:var(--green);border-radius:7px;transition:width .4s ease}
+.team-progress-label{font-size:12px;color:var(--muted);margin-bottom:14px;margin-top:-8px}
+.team-stats{display:flex;gap:12px;flex-wrap:wrap}
+.team-stat{flex:1;min-width:80px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center}
+.team-stat-v{font-size:22px;font-weight:700}
+.team-stat-l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+.team-actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.team-actions button{padding:6px 14px;border:1px solid var(--border);border-radius:16px;font-size:12px;background:var(--bg);color:var(--muted)}
+.team-actions button:hover{background:var(--border)}
+.team-actions button.danger{color:#c9372c;border-color:#fcc}
+.team-actions button.danger:hover{background:#fee}
+.nav-team{background:var(--green);color:#fff;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:600;margin-left:8px}
+.modal input[type=text]{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:16px;margin:10px 0;font-family:inherit}
+.modal .team-list{max-height:180px;overflow-y:auto;margin:10px 0;text-align:left}
+.modal .team-list-item{padding:10px 14px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:14px}
+.modal .team-list-item:hover{background:var(--bg-alt)}
+.modal .team-list-item .dot{width:10px;height:10px;border-radius:50%;background:var(--green)}
+
+/* ===== WORD SEARCH ===== */
+.game-icon.ws{background:#d4dce8;color:#2d4a6b}
+.ws-board{display:flex;gap:28px;align-items:flex-start;justify-content:center;flex-wrap:wrap}
+.ws-grid{display:inline-grid;user-select:none;touch-action:none;border:2px solid var(--text);background:var(--text);gap:1px}
+.ws-cell{width:34px;height:34px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;text-transform:uppercase;background:#fff;cursor:pointer;transition:background .1s;user-select:none}
+.ws-cell.selecting{background:var(--cw-highlight)}
+.ws-cell.found{background:var(--green);color:#fff}
+.ws-words{min-width:160px;max-width:220px}
+.ws-words-title{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:8px;padding-bottom:4px;border-bottom:2px solid var(--border)}
+.ws-word{font-size:14px;padding:3px 0;font-weight:500}
+.ws-word.found{text-decoration:line-through;color:var(--muted);font-weight:400}
+
 /* ===== RESPONSIVE ===== */
 @media(max-width:768px){
   .cw-body{flex-direction:column}
@@ -168,6 +205,8 @@ a{color:inherit;text-decoration:none}
   .hub-title{font-size:30px}
   .game-tile{padding:16px 18px}
   .cn-tile{font-size:12px}
+  .ws-board{flex-direction:column;align-items:center}
+  .ws-cell{width:28px;height:28px;font-size:13px}
 }
 @media(max-width:480px){
   .cw-cell .n{font-size:8px}
@@ -181,7 +220,7 @@ a{color:inherit;text-decoration:none}
 
 <div class="nav">
   <button class="nav-back" id="navBack" onclick="hub()">&#8592;</button>
-  <div class="nav-brand" id="navBrand">Applied Resilience <small>Games</small></div>
+  <div class="nav-brand" id="navBrand">Applied Resilience <small>Games</small></div><span class="nav-team" id="navTeam" style="display:none"></span>
   <div class="nav-timer" id="navTimer">0:00</div>
   <div class="nav-actions" id="navActions"></div>
 </div>
@@ -192,6 +231,7 @@ a{color:inherit;text-decoration:none}
 <div id="hubView" class="hub">
   <div class="hub-title">Games</div>
   <div class="hub-sub">Applied Resilience — SCET, UC Berkeley</div>
+  <div id="teamDash"></div>
   <div class="game-list">
     <div class="game-tile" onclick="showGame('crossword')">
       <div class="game-icon cw">⊞</div>
@@ -214,6 +254,14 @@ a{color:inherit;text-decoration:none}
       <div class="game-info">
         <div class="game-name">Word Guess</div>
         <div class="game-desc">Guess the 5-letter course term in 6 tries</div>
+      </div>
+      <div class="game-arrow">›</div>
+    </div>
+    <div class="game-tile" onclick="showGame('wordsearch')">
+      <div class="game-icon ws">⊡</div>
+      <div class="game-info">
+        <div class="game-name">Word Search</div>
+        <div class="game-desc">Find hidden course terms in the letter grid</div>
       </div>
       <div class="game-arrow">›</div>
     </div>
@@ -258,6 +306,17 @@ a{color:inherit;text-decoration:none}
     <div class="wl-msg" id="wlMsg"></div>
     <div class="wl-grid" id="wlGrid"></div>
     <div class="wl-keyboard" id="wlKeyboard"></div>
+  </div>
+</div>
+
+<!-- WORD SEARCH -->
+<div id="wsView" class="view">
+  <div class="view-title">Word Search</div>
+  <div class="view-sub" id="wsSub"></div>
+  <div class="picker" id="wsPicker"></div>
+  <div class="ws-board">
+    <div class="ws-grid" id="wsGrid"></div>
+    <div class="ws-words" id="wsWords"></div>
   </div>
 </div>
 
@@ -432,6 +491,13 @@ const WL_WORDS = [
   {a:"YANNY",c:"Half the internet heard this name; others heard \"Laurel\"",src:"Lecture 2"},
 ];
 
+const WS_PUZZLES = [
+  {id:1,title:"Foundations",sub:"Lecture 1",size:14,words:["RESILIENCE","INTENTION","REJECTION","AWARENESS","CARNIVAL","PRACTICE","TEAMWORK","MINDSET","GROWTH","BOUNCE","AGILE","GRIT"]},
+  {id:2,title:"Mind & Body",sub:"Lectures 2–3",size:14,words:["PERCEPTION","CURIOSITY","FRACTALS","BURNOUT","ANXIETY","COMFORT","SPIRALS","SENSES","GOLDEN","TETRIS","NOVELTY","SMART"]},
+  {id:3,title:"Think Again",sub:"Lectures 4–5",size:14,words:["PERSPECTIVE","RETHINKING","PROSECUTOR","GRATITUDE","SCIENTIST","PREACHER","CRUCIBLE","HUMILITY","REFRAME","DOPAMINE","PIVOT","SWOT"]},
+  {id:4,title:"The Mountain",sub:"Lectures 6–7",size:14,words:["HEURISTICS","TURNAROUND","DISRUPTION","BASECAMP","COUPLING","IDENTITY","EVEREST","MAPPING","SHERPA","SUMMIT","LEVINE","BIAS"]},
+];
+
 // ============================
 // UTILITIES
 // ============================
@@ -443,6 +509,75 @@ function closeModal(){$('modalBg').classList.remove('active')}
 function showModal(html){$('modalContent').innerHTML=html;$('modalBg').classList.add('active')}
 
 let currentView='hub';
+
+// ============================
+// TEAM SYSTEM
+// ============================
+const teams={
+  data:null,
+  init(){this.data=this.load();if(!this.data)this.data={teams:{},active:null};this.updNav()},
+  load(){try{const r=localStorage.getItem('ar_teams');return r?JSON.parse(r):null}catch(e){return null}},
+  save(){try{localStorage.setItem('ar_teams',JSON.stringify(this.data))}catch(e){}},
+  getActive(){return this.data.active?this.data.teams[this.data.active]:null},
+  create(name){if(!name.trim())return;const n=name.trim();this.data.teams[n]={name:n,created:Date.now(),completions:{},stats:{totalHints:0,termsLearned:0}};this.data.active=n;this.save();this.updNav()},
+  setActive(name){this.data.active=name;this.save();this.updNav()},
+  deleteTeam(name){delete this.data.teams[name];if(this.data.active===name)this.data.active=null;this.save();this.updNav()},
+  clearAll(){this.data={teams:{},active:null};this.save();this.updNav()},
+  totalGames(){return CW_PUZZLES.length+CN_PUZZLES.length+Math.min(WL_WORDS.length,8)+WS_PUZZLES.length},
+  recordCompletion(type,id,details){
+    const t=this.getActive();if(!t)return;
+    const key=type+'_'+id;
+    if(t.completions[key])return;
+    t.completions[key]={...details,ts:Date.now()};
+    if(details.hints)t.stats.totalHints+=details.hints;
+    if(details.words)t.stats.termsLearned+=details.words;
+    else if(details.wordsFound)t.stats.termsLearned+=details.wordsFound;
+    else if(type==='connections')t.stats.termsLearned+=16;
+    else if(type==='wordle')t.stats.termsLearned+=1;
+    this.save();
+  },
+  updNav(){
+    const el=$('navTeam');
+    if(this.data.active){el.textContent=this.data.active;el.style.display=''}
+    else{el.style.display='none'}
+  },
+  renderDash(){
+    const el=$('teamDash');
+    const t=this.getActive();
+    if(!t){el.innerHTML='';return}
+    const done=Object.keys(t.completions).length;
+    const total=this.totalGames();
+    const pct=Math.round(done/total*100);
+    const hintCount=t.stats.totalHints||0;
+    const termCount=t.stats.termsLearned||0;
+    const teamNames=Object.keys(this.data.teams);
+    el.innerHTML=`<div class="team-dash">
+      <div class="team-header"><div class="team-name">${t.name}</div><button onclick="teams.showPicker()">Switch</button></div>
+      <div class="team-progress"><div class="team-progress-fill" style="width:${pct}%"></div></div>
+      <div class="team-progress-label">${done} of ${total} games completed (${pct}%)</div>
+      <div class="team-stats">
+        <div class="team-stat"><div class="team-stat-v">${termCount}</div><div class="team-stat-l">Terms Learned</div></div>
+        <div class="team-stat"><div class="team-stat-v">${hintCount}</div><div class="team-stat-l">Hints Used</div></div>
+        <div class="team-stat"><div class="team-stat-v">${done}</div><div class="team-stat-l">Games Done</div></div>
+      </div>
+      <div class="team-actions">
+        <button onclick="teams.showPicker()">New Team</button>
+        <button class="danger" onclick="if(confirm('Delete team ${t.name}?')){teams.deleteTeam('${t.name}');teams.showPicker()}">Delete Team</button>
+        <button class="danger" onclick="if(confirm('Clear ALL teams and progress?')){teams.clearAll();teams.showPicker()}">Clear All</button>
+      </div>
+    </div>`;
+  },
+  showPicker(){
+    const teamNames=Object.keys(this.data.teams);
+    const listHtml=teamNames.map(n=>`<div class="team-list-item" onclick="teams.setActive('${n}');closeModal();teams.renderDash()"><div class="dot"></div>${n}</div>`).join('');
+    showModal(`<h2>Pick Your Team</h2>
+      <input type="text" id="teamInput" placeholder="Enter team name...">
+      <button onclick="const v=$('teamInput').value;if(v.trim()){teams.create(v);closeModal();teams.renderDash()}" style="margin-bottom:16px">Create / Join</button>
+      ${teamNames.length?'<div class="team-list">'+listHtml+'</div>':'<p>No teams yet — create one above!</p>'}
+    `);
+  }
+};
+
 function hub(){
   currentView='hub';
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
@@ -452,6 +587,8 @@ function hub(){
   $('navTimer').style.display='none';
   $('navActions').innerHTML='';
   if(cw.timerInt) clearInterval(cw.timerInt);
+  if(ws.timerInt) clearInterval(ws.timerInt);
+  teams.renderDash();
 }
 
 function showGame(g){
@@ -464,6 +601,7 @@ function showGame(g){
   if(g==='crossword'){cw.init()}
   else if(g==='connections'){cn.init()}
   else if(g==='wordle'){wl.init()}
+  else if(g==='wordsearch'){ws.init()}
 }
 
 // ============================
@@ -524,6 +662,42 @@ function trim(res){
   const cm=Array.from({length:rows},()=>Array.from({length:cols},()=>({})));
   for(const p of ap){const dr=p.dir==='d'?1:0,dc=p.dir==='a'?1:0;for(let i=0;i<p.a.length;i++){cm[p.row+dr*i][p.col+dc*i][p.dir]=p}cm[p.row][p.col].num=p.num}
   return{grid:tg,placed:ap,across,down,cm,rows,cols,ints}
+}
+
+// ============================
+// WORD SEARCH GENERATOR
+// ============================
+function genWordSearch(words,size,seed){
+  const r=rng(seed),g=Array.from({length:size},()=>Array(size).fill(null));
+  const dirs=[[0,1],[1,0],[1,1],[1,-1],[0,-1],[-1,0],[-1,-1],[-1,1]];
+  const sorted=words.slice().sort((a,b)=>b.length-a.length);
+  const placed=[];
+  for(const word of sorted){
+    const attempts=[];
+    for(let row=0;row<size;row++)for(let col=0;col<size;col++)for(const[dr,dc] of dirs){
+      attempts.push({row,col,dr,dc});
+    }
+    const sh=shuffle(attempts,r);
+    let ok=false;
+    for(const{row,col,dr,dc}of sh){
+      const er=row+dr*(word.length-1),ec=col+dc*(word.length-1);
+      if(er<0||er>=size||ec<0||ec>=size)continue;
+      let valid=true;
+      for(let i=0;i<word.length;i++){
+        const cr=row+dr*i,cc=col+dc*i;
+        if(g[cr][cc]!==null&&g[cr][cc]!==word[i]){valid=false;break}
+      }
+      if(valid){
+        for(let i=0;i<word.length;i++)g[row+dr*i][col+dc*i]=word[i];
+        placed.push({word,row,col,dr,dc});ok=true;break;
+      }
+    }
+  }
+  const letters='ABCDEFGHIJKLMNOPRSTUVW';
+  for(let row=0;row<size;row++)for(let col=0;col<size;col++){
+    if(g[row][col]===null)g[row][col]=letters[Math.floor(r()*letters.length)];
+  }
+  return{grid:g,placed,size};
 }
 
 // ============================
@@ -899,6 +1073,7 @@ const cw={
     const{ug,g}=this.st;
     for(let r=0;r<g.rows;r++)for(let c=0;c<g.cols;c++){if(g.grid[r][c]!=null&&ug[r][c]!==g.grid[r][c])return}
     this.st.done=true;clearInterval(this.timerInt);this.save();
+    teams.recordCompletion('crossword',this.st.id,{time:this.st.t,hints:Object.keys(this.st.hints).length,words:this.st.g.placed.length});
     const hc=Object.keys(this.st.hints).length;
     showModal(`<h2>Puzzle Complete!</h2><p>${this.st.pz.title}</p>
       <div class="stats"><div><div class="stat-v">${fmtTime(this.st.t)}</div><div class="stat-l">Time</div></div>
@@ -1018,6 +1193,7 @@ const cn={
       this.st.msg='';
       if(found.length===4){
         this.st.done=true;
+        teams.recordCompletion('connections',this.st.id,{mistakes:4-this.st.lives,won:this.st.lives>0});
         setTimeout(()=>showModal(`<h2>Nice!</h2><p>You found all 4 groups!</p><div class="stats"><div><div class="stat-v">${4-this.st.lives}</div><div class="stat-l">Mistakes</div></div></div><button onclick="closeModal()">Continue</button>`),500);
       }
       this.save();this.render();this.renderPicker();
@@ -1154,6 +1330,7 @@ const wl={
     this.st.guesses.push(g);this.st.current='';
     if(g===this.st.word.a){
       this.st.done=true;this.st.won=true;this.st.msg='';
+      teams.recordCompletion('wordle',this.st.id,{guesses:this.st.guesses.length,won:true});
       this.save();this.render();this.renderPicker();
       setTimeout(()=>{
         showModal(`<h2>Brilliant!</h2><p>You got it in ${this.st.guesses.length}/6</p>
@@ -1162,6 +1339,7 @@ const wl={
       },400);
     }else if(this.st.guesses.length>=6){
       this.st.done=true;this.st.won=false;this.st.msg='The word was '+this.st.word.a;
+      teams.recordCompletion('wordle',this.st.id,{guesses:6,won:false});
       this.save();this.render();this.renderPicker();
       setTimeout(()=>{
         showModal(`<h2>${this.st.word.a}</h2>
@@ -1183,6 +1361,138 @@ const wl={
 };
 
 // ============================
+// WORD SEARCH GAME
+// ============================
+const ws={
+  cache:{},st:null,timerInt:null,
+  init(){
+    $('wsView').classList.add('active');
+    $('navBrand').innerHTML='Word Search';
+    $('navTimer').style.display='';
+    this.renderPicker();
+    this.load(1);
+  },
+  renderPicker(){
+    const el=$('wsPicker');el.innerHTML='';
+    WS_PUZZLES.forEach(p=>{
+      const b=document.createElement('button');
+      const sv=this.getSave(p.id);
+      b.textContent=p.title;b.className=(sv&&sv.done?'done':'');
+      b.onclick=()=>this.load(p.id);el.appendChild(b);
+    });
+  },
+  load(id){
+    if(this.timerInt)clearInterval(this.timerInt);
+    const pz=WS_PUZZLES.find(p=>p.id===id);
+    if(!this.cache[id])this.cache[id]=genWordSearch(pz.words,pz.size,id*6131+17);
+    const g=this.cache[id];
+    const sv=this.getSave(id);
+    this.st={id,pz,g,
+      found:sv?sv.found:[],
+      foundCells:sv?sv.foundCells:[],
+      t:sv?sv.t||0:0,
+      done:sv?sv.done||false:false,
+      selStart:null,selEnd:null,selCells:[]
+    };
+    $('wsSub').textContent=pz.sub;
+    $('wsPicker').querySelectorAll('button').forEach((b,i)=>b.classList.toggle('active',WS_PUZZLES[i].id===id));
+    this.renderGrid();this.renderWords();this.updTimer();this.startTimer();
+  },
+  renderGrid(){
+    const{g}=this.st;const el=$('wsGrid');
+    let cs=34;
+    if(window.innerWidth<600)cs=Math.min(cs,Math.floor((window.innerWidth-60)/g.size));
+    el.style.gridTemplateColumns=`repeat(${g.size},${cs}px)`;
+    el.innerHTML='';
+    for(let r=0;r<g.size;r++)for(let c=0;c<g.size;c++){
+      const d=document.createElement('div');d.className='ws-cell';
+      d.textContent=g.grid[r][c];d.dataset.r=r;d.dataset.c=c;
+      d.addEventListener('pointerdown',e=>{e.preventDefault();this.pDown(r,c,e)});
+      d.addEventListener('pointerenter',()=>{if(this.st.selStart)this.pMove(r,c)});
+      el.appendChild(d);
+    }
+    el.addEventListener('pointerup',()=>this.pUp());
+    el.addEventListener('pointerleave',()=>this.pUp());
+    this.updGrid();
+  },
+  renderWords(){
+    const el=$('wsWords');
+    el.innerHTML='<div class="ws-words-title">Find these words</div>';
+    this.st.pz.words.forEach(w=>{
+      const d=document.createElement('div');d.className='ws-word'+(this.st.found.includes(w)?' found':'');
+      d.textContent=w;el.appendChild(d);
+    });
+  },
+  updGrid(){
+    const{g,found,foundCells,selCells}=this.st;
+    const fc=new Set();foundCells.forEach(cells=>cells.forEach(([r,c])=>fc.add(r+','+c)));
+    const sc=new Set(selCells.map(([r,c])=>r+','+c));
+    $('wsGrid').querySelectorAll('.ws-cell').forEach(cell=>{
+      const r=+cell.dataset.r,c=+cell.dataset.c,k=r+','+c;
+      cell.classList.toggle('found',fc.has(k));
+      cell.classList.toggle('selecting',sc.has(k)&&!fc.has(k));
+    });
+  },
+  pDown(r,c,e){
+    if(this.st.done)return;
+    this.st.selStart={r,c};this.st.selEnd={r,c};
+    this.st.selCells=[[r,c]];this.updGrid();
+    e.target.setPointerCapture&&e.target.setPointerCapture(e.pointerId);
+  },
+  pMove(r,c){
+    if(!this.st.selStart)return;
+    const s=this.st.selStart;
+    const cells=this.lineCells(s.r,s.c,r,c);
+    if(cells){this.st.selCells=cells;this.st.selEnd={r,c};this.updGrid()}
+  },
+  pUp(){
+    if(!this.st.selStart){return}
+    const cells=this.st.selCells;
+    if(cells.length>1)this.checkSel(cells);
+    this.st.selStart=null;this.st.selEnd=null;this.st.selCells=[];this.updGrid();
+  },
+  lineCells(r1,c1,r2,c2){
+    const dr=Math.sign(r2-r1),dc=Math.sign(c2-c1);
+    if(dr===0&&dc===0)return[[r1,c1]];
+    const ar=Math.abs(r2-r1),ac=Math.abs(c2-c1);
+    if(ar!==0&&ac!==0&&ar!==ac)return null;
+    const len=Math.max(ar,ac)+1;
+    const cells=[];
+    for(let i=0;i<len;i++)cells.push([r1+dr*i,c1+dc*i]);
+    return cells;
+  },
+  checkSel(cells){
+    const{g,found,pz}=this.st;
+    const fwd=cells.map(([r,c])=>g.grid[r][c]).join('');
+    const rev=fwd.split('').reverse().join('');
+    for(const w of pz.words){
+      if(!found.includes(w)&&(fwd===w||rev===w)){
+        this.st.found.push(w);
+        this.st.foundCells.push(cells);
+        this.renderWords();this.updGrid();this.save();this.chkDone();
+        return;
+      }
+    }
+  },
+  chkDone(){
+    if(this.st.found.length===this.st.pz.words.length){
+      this.st.done=true;clearInterval(this.timerInt);this.save();
+      teams.recordCompletion('wordsearch',this.st.id,{time:this.st.t,wordsFound:this.st.found.length});
+      showModal(`<h2>All Found!</h2><p>${this.st.pz.title}</p>
+        <div class="stats"><div><div class="stat-v">${fmtTime(this.st.t)}</div><div class="stat-l">Time</div></div>
+        <div><div class="stat-v">${this.st.found.length}</div><div class="stat-l">Words</div></div></div>
+        <button onclick="closeModal()">Continue</button>`);
+      this.renderPicker();
+    }
+  },
+  startTimer(){if(this.timerInt)clearInterval(this.timerInt);if(this.st.done)return;
+    this.timerInt=setInterval(()=>{this.st.t++;this.updTimer()},1000)},
+  updTimer(){$('navTimer').textContent=fmtTime(this.st?this.st.t:0)},
+  save(){if(!this.st)return;try{localStorage.setItem('ws_'+this.st.id,JSON.stringify({found:this.st.found,foundCells:this.st.foundCells,t:this.st.t,done:this.st.done}))}catch(e){}},
+  getSave(id){try{const r=localStorage.getItem('ws_'+id);return r?JSON.parse(r):null}catch(e){return null}},
+};
+
+// ============================
 // INIT
 // ============================
 document.addEventListener('keydown',e=>{cw.key(e);wl.key(e)});
@@ -1190,6 +1500,9 @@ const hi=$('hiddenInput');
 hi.addEventListener('input',()=>{const v=hi.value;hi.value='';if(v&&/[a-zA-Z]/.test(v))cw.enter(v.slice(-1).toUpperCase())});
 hi.addEventListener('keydown',e=>{if(e.key==='Backspace'){e.preventDefault();cw.bksp()}});
 $('modalBg').onclick=e=>{if(e.target===$('modalBg'))closeModal()};
+teams.init();
+teams.renderDash();
+if(!teams.getActive())teams.showPicker();
 </script>
 </body>
 </html>
